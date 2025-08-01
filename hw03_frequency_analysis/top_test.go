@@ -105,7 +105,7 @@ func TestTop10(t *testing.T) {
 	})
 
 	t.Run("single dashes test", func(t *testing.T) {
-		var expected = []string{}
+		expected := []string{}
 		require.Equal(t, expected, Top10("- - "))
 	})
 }

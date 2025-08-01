@@ -1,10 +1,10 @@
 package hw03frequencyanalysis
 
 import (
-	"fmt"
 	"regexp"
 	"sort"
 	"strings"
+	"unicode/utf8"
 )
 
 type WordCount struct {
@@ -12,15 +12,7 @@ type WordCount struct {
 	count int
 }
 
-var re *regexp.Regexp
-
-func init() {
-	var err error
-	re, err = regexp.Compile(`(\p{L}|-{2,})(?:\S*(\p{L}|-))?`)
-	if err != nil {
-		panic(fmt.Errorf("invalid regexp: %w", err))
-	}
-}
+var re = regexp.MustCompile(`(\p{L}|-{2,})(?:\S*(\p{L}|-))?`)
 
 func Top10(text string) []string {
 	mySlice := WordsCount(text)
@@ -50,7 +42,7 @@ func WordsCount(text string) []WordCount {
 }
 
 func ToWords(text string) []string {
-	var result []string
+	result := make([]string, 0, utf8.RuneCountInString(text)/5)
 	matches := re.FindAllString(text, -1)
 	for _, word := range matches {
 		result = append(result, strings.ToLower(word))
