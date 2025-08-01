@@ -2,33 +2,43 @@ package hw03frequencyanalysis
 
 import (
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
-	"unicode"
 )
 
-type EntryMap struct {
+type WordCount struct {
 	word  string
 	count int
 }
 
-func Top10(text string) []string {
-	word2count := make(map[string]int, 10)
-	var currentWord strings.Builder
-	for _, r := range text {
-		if unicode.IsSpace(r) {
-			if currentWord.String() != "" {
-				word2count[currentWord.String()]++
-				currentWord.Reset()
-			}
-		} else {
-			currentWord.WriteRune(r)
-		}
-	}
-	mySlice := make([]EntryMap, 0, len(word2count))
+var re *regexp.Regexp
 
+func init() {
+	var err error
+	re, err = regexp.Compile(`(\p{L}|-{2,})(?:\S*(\p{L}|-))?`)
+	if err != nil {
+		panic(fmt.Errorf("invalid regexp: %w", err))
+	}
+}
+
+func Top10(text string) []string {
+	mySlice := WordsCount(text)
+	result := make([]string, 0, 10)
+	for i := 0; i < 10 && i < len(mySlice); i++ {
+		result = append(result, mySlice[i].word)
+	}
+	return result
+}
+
+func WordsCount(text string) []WordCount {
+	word2count := make(map[string]int)
+	for _, word := range ToWords(text) {
+		word2count[word]++
+	}
+	mySlice := make([]WordCount, 0, len(word2count))
 	for word, count := range word2count {
-		mySlice = append(mySlice, EntryMap{word, count})
+		mySlice = append(mySlice, WordCount{word, count})
 	}
 	sort.Slice(mySlice, func(i, j int) bool {
 		if mySlice[i].count == mySlice[j].count {
@@ -36,10 +46,14 @@ func Top10(text string) []string {
 		}
 		return mySlice[i].count > mySlice[j].count
 	})
-	fmt.Println(mySlice)
-	result := make([]string, 0, 10)
-	for i := 0; i < len(mySlice) && i < 10; i++ {
-		result = append(result, mySlice[i].word)
+	return mySlice
+}
+
+func ToWords(text string) []string {
+	var result []string
+	matches := re.FindAllString(text, -1)
+	for _, word := range matches {
+		result = append(result, strings.ToLower(word))
 	}
 	return result
 }
