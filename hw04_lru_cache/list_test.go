@@ -48,4 +48,31 @@ func TestList(t *testing.T) {
 		}
 		require.Equal(t, []int{70, 80, 60, 40, 10, 30, 50}, elems)
 	})
+
+	t.Run("remove last element", func(t *testing.T) {
+		l := NewList()
+		item := l.PushFront(10)
+		l.Remove(item)
+		require.Equal(t, 0, l.Len())
+		require.Nil(t, l.Front())
+		require.Nil(t, l.Back())
+	})
+
+	t.Run("complex test for string", func(t *testing.T) {
+		l := NewList()
+		l.PushBack("123")
+		require.Equal(t, "123", l.Front().Value.(string))
+		require.Equal(t, "123", l.Back().Value.(string))
+		require.Equal(t, 1, l.Len())
+		l.Remove(l.Front())
+		require.Equal(t, 0, l.Len())
+		l.PushBack("qwe1")
+		l.PushBack("qwe2")
+		l.PushFront("qwe0")
+		lst := make([]string, 0, l.Len())
+		for el := l.Front(); el != nil; el = el.Next {
+			lst = append(lst, el.Value.(string))
+		}
+		require.Equal(t, []string{"qwe0", "qwe1", "qwe2"}, lst)
+	})
 }
