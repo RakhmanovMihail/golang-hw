@@ -38,6 +38,7 @@ func (c *lruCache) Set(key Key, value interface{}) bool {
 	}
 	return wasInCache
 }
+
 func (c *lruCache) removeLatest() {
 	latest := c.queue.Back()
 	if latest != nil {
