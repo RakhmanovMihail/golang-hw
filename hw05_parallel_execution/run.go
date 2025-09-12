@@ -6,24 +6,26 @@ import (
 )
 
 var ErrErrorsLimitExceeded = errors.New("errors limit exceeded")
+
 var ErrInvalidData = errors.New("invalid data: n and m must be > 0")
 
 type Task func() error
 
 type counter struct {
-	sync.Mutex
-	value int
+	mu  sync.RWMutex
+	val int
 }
 
-func (c *counter) Increment() {
-	c.Lock()
-	defer c.Unlock()
-	c.value++
+func (c *counter) increment() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.val++
 }
-func (c *counter) Value() int {
-	c.Lock()
-	defer c.Unlock()
-	return c.value
+
+func (c *counter) value() int {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.val
 }
 
 func Run(tasks []Task, n, m int) error {
@@ -36,34 +38,30 @@ func Run(tasks []Task, n, m int) error {
 	if len(tasks) == 0 {
 		return nil
 	}
-
 	var errorCount counter
 	var wg sync.WaitGroup
 	ch := make(chan Task)
-
 	for i := 0; i < n; i++ {
 		go func() {
 			for task := range ch {
 				err := task()
 				if err != nil {
-					errorCount.Increment()
+					errorCount.increment()
 				}
 				wg.Done()
 			}
 		}()
 	}
-
 	for _, task := range tasks {
-		if errorCount.Value() >= m {
+		if errorCount.value() >= m {
 			break
 		}
 		wg.Add(1)
 		ch <- task
 	}
 	close(ch)
-
 	wg.Wait()
-	if errorCount.Value() >= m {
+	if errorCount.value() >= m {
 		return ErrErrorsLimitExceeded
 	}
 	return nil
