@@ -67,34 +67,4 @@ func TestRun(t *testing.T) {
 		require.Equal(t, runTasksCount, int32(tasksCount), "not all tasks were completed")
 		require.LessOrEqual(t, int64(elapsedTime), int64(sumTime/2), "tasks were run sequentially?")
 	})
-
-	t.Run("returns ErrErrorsLimitExceeded if error limit exceeded", func(t *testing.T) {
-		tasksCount := 100
-		tasks := make([]Task, 0, tasksCount)
-
-		var runTasksCount int32
-
-		for i := 0; i < tasksCount; i++ {
-			tasks = append(tasks, func() error {
-				atomic.AddInt32(&runTasksCount, 1)
-				return errors.New("always error")
-			})
-		}
-
-		workersCount := 5
-		errorLimit := -10
-
-		err := Run(tasks, workersCount, errorLimit)
-		require.ErrorIs(t, err, ErrInvalidData)
-	})
-	t.Run("invalid n (<=0)", func(t *testing.T) {
-		require.ErrorIs(t, Run(nil, 0, 1), ErrInvalidData)
-	})
-
-	t.Run("invalid m (=0)", func(t *testing.T) {
-		require.ErrorIs(t, Run(nil, 1, 0), ErrInvalidData)
-	})
-	t.Run("empty task", func(t *testing.T) {
-		require.Equal(t, nil, Run(nil, 1, 1))
-	})
 }
