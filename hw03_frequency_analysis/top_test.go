@@ -6,8 +6,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// Change to true if needed.
-var taskWithAsteriskIsCompleted = false
+var taskWithAsteriskIsCompleted = true
 
 var text = `Как видите, он  спускается  по  лестнице  вслед  за  своим
 	другом   Кристофером   Робином,   головой   вниз,  пересчитывая
@@ -78,5 +77,35 @@ func TestTop10(t *testing.T) {
 			}
 			require.Equal(t, expected, Top10(text))
 		}
+	})
+
+	t.Run("simple test", func(t *testing.T) {
+		expected := []string{"как-то", "так", "что-то"}
+		require.Equal(t, expected, Top10("Что-то как-то так."))
+	})
+
+	t.Run("punctuation test", func(t *testing.T) {
+		expected := []string{"нога"}
+		require.Equal(t, expected, Top10("нога! нога, 'нога' нога"))
+	})
+
+	t.Run("hyphen test", func(t *testing.T) {
+		expected := []string{"какой-то", "какойто"}
+		require.Equal(t, expected, Top10("какой-то какойто"))
+	})
+
+	t.Run("punctuation separator test", func(t *testing.T) {
+		expected := []string{"dog,cat", "dog...cat"}
+		require.Equal(t, expected, Top10("dog,cat dog...cat"))
+	})
+
+	t.Run("dash word test", func(t *testing.T) {
+		expected := []string{"------"}
+		require.Equal(t, expected, Top10("------"))
+	})
+
+	t.Run("single dashes test", func(t *testing.T) {
+		expected := []string{}
+		require.Equal(t, expected, Top10("- - "))
 	})
 }
