@@ -90,4 +90,71 @@ func TestPipeline(t *testing.T) {
 		require.Len(t, result, 0)
 		require.Less(t, int64(elapsed), int64(abortDur)+int64(fault))
 	})
+
+	t.Run("empty input", func(t *testing.T) {
+		in := make(Bi)
+		close(in) // сразу закрыли вход
+
+		var result []interface{}
+		for v := range ExecutePipeline(in, nil, stages...) {
+			result = append(result, v)
+		}
+
+		require.Empty(t, result, "pipeline should return empty result on closed input")
+	})
+
+	t.Run("no stages", func(t *testing.T) {
+		in := make(Bi)
+		data := []int{42, 100}
+		go func() {
+			for _, v := range data {
+				in <- v
+			}
+			close(in)
+		}()
+
+		var result []interface{}
+		for v := range ExecutePipeline(in, nil) {
+			result = append(result, v)
+		}
+
+		require.Equal(t, []interface{}{42, 100}, result)
+	})
+
+	t.Run("single stage", func(t *testing.T) {
+		in := make(Bi)
+		data := []int{1, 2, 3}
+		go func() {
+			for _, v := range data {
+				in <- v
+			}
+			close(in)
+		}()
+
+		var result []int
+		for v := range ExecutePipeline(in, nil, stages[1]) {
+			result = append(result, v.(int))
+		}
+
+		require.Equal(t, []int{2, 4, 6}, result)
+	})
+
+	t.Run("immediate done", func(t *testing.T) {
+		in := make(Bi)
+		done := make(Bi)
+		close(done)
+
+		go func() {
+			in <- 1
+			in <- 2
+			close(in)
+		}()
+
+		var result []interface{}
+		for v := range ExecutePipeline(in, done, stages...) {
+			result = append(result, v)
+		}
+
+		require.Empty(t, result, "pipeline should stop immediately if done is closed")
+	})
 }
