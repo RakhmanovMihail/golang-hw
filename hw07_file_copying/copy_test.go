@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -26,13 +27,8 @@ func TestCopy(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			outputFile := "test_out_" + tc.name + ".txt"
-			defer func(name string) {
-				err := os.Remove(name)
-				if err != nil {
-
-				}
-			}(outputFile)
+			tmpDir := t.TempDir()
+			outputFile := filepath.Join(tmpDir, "out.txt")
 
 			err := Copy("testdata/input.txt", outputFile, tc.offset, tc.limit)
 
@@ -45,6 +41,11 @@ func TestCopy(t *testing.T) {
 
 			_, err = os.Stat(outputFile)
 			assert.NoError(t, err, "output file should exist")
+
+			// Explicit cleanup right after assertions to ensure file is removed immediately.
+			if rmErr := os.Remove(outputFile); rmErr != nil && !os.IsNotExist(rmErr) {
+				t.Logf("failed to remove file immediately: %v", rmErr)
+			}
 
 		})
 	}
@@ -66,13 +67,8 @@ func TestCopy_Validation(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			outputFile := "test_validation_" + tc.name + ".txt"
-			defer func(name string) {
-				err := os.Remove(name)
-				if err != nil {
-					t.Logf("failed to remove file: %v", err)
-				}
-			}(outputFile)
+			tmpDir := t.TempDir()
+			outputFile := filepath.Join(tmpDir, "out.txt")
 
 			err := Copy(tc.src, outputFile, tc.offset, tc.limit)
 
