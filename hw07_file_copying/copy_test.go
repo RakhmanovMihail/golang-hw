@@ -46,7 +46,6 @@ func TestCopy(t *testing.T) {
 			if rmErr := os.Remove(outputFile); rmErr != nil && !os.IsNotExist(rmErr) {
 				t.Logf("failed to remove file immediately: %v", rmErr)
 			}
-
 		})
 	}
 }

@@ -13,7 +13,7 @@ var (
 )
 
 func Copy(fromPath, toPath string, offset, limit int64) error {
-	//32 KB
+	// 32 KB
 	bufferSize := 32 * 1024
 
 	file, err := os.Open(fromPath)
@@ -65,17 +65,6 @@ func Copy(fromPath, toPath string, offset, limit int64) error {
 	}
 
 	totalToCopy := remaining
-	lastPct := -1
-	printProgress := func(done, total int64) {
-		if total <= 0 {
-			return
-		}
-		pct := int(done * 100 / total)
-		if pct != lastPct {
-			lastPct = pct
-			fmt.Printf("\rProgress: %d%%", pct)
-		}
-	}
 
 	for remaining > 0 {
 		toRead := data
@@ -105,4 +94,12 @@ func Copy(fromPath, toPath string, offset, limit int64) error {
 		fmt.Printf("\rProgress: %3d%%\n", 100)
 	}
 	return nil
+}
+
+func printProgress(done, total int64) {
+	if total <= 0 {
+		return
+	}
+	pct := int(done * 100 / total)
+	fmt.Printf("\rProgress: %d%%", pct)
 }
