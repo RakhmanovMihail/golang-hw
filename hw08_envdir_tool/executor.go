@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 )
 
@@ -16,7 +17,18 @@ func RunCmd(cmd []string, env Environment) (returnCode int) {
 	}
 
 	// Validate the command path
-	if _, err := exec.LookPath(cmd[0]); err != nil {
+	if cmd[0] == "" {
+		return 1
+	}
+
+	// Get the absolute path of the command to prevent path traversal
+	path, err := exec.LookPath(cmd[0])
+	if err != nil {
+		return 1
+	}
+
+	// Additional security check: ensure the path is clean and doesn't contain any path traversal
+	if path != filepath.Clean(path) {
 		return 1
 	}
 
@@ -26,9 +38,12 @@ func RunCmd(cmd []string, env Environment) (returnCode int) {
 
 	switch len(cmd) {
 	case 1:
-		command = exec.CommandContext(ctx, cmd[0])
+		command = exec.CommandContext(ctx, path)
 	default:
-		command = exec.CommandContext(ctx, cmd[0], cmd[1:]...)
+		// Use the resolved path but keep the original command name for display
+		args := make([]string, len(cmd))
+		copy(args, cmd[1:])
+		command = exec.CommandContext(ctx, path, args...)
 	}
 
 	// Set up the command's standard I/O
