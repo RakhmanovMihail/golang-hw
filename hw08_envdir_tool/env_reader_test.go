@@ -76,7 +76,9 @@ func TestReadDir(t *testing.T) {
 				})
 				return dir
 			},
-			expected:    Environment{},
+			expected: Environment{
+				"VALID_VAR": {Value: "valid", NeedRemove: false},
+			},
 			expectError: false,
 		},
 		{
