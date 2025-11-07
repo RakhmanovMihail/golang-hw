@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -52,10 +53,9 @@ func RunCmd(cmd []string, env Environment) (returnCode int) {
 
 	// Set up the command's standard I/O
 	command.Stdin = os.Stdin
-	// Capture both stdout and stderr
-	var outputBuf strings.Builder
-	command.Stdout = &outputBuf
-	command.Stderr = &outputBuf
+	// Use os.Stdout and os.Stderr for output
+	command.Stdout = os.Stdout
+	command.Stderr = os.Stderr
 
 	// Get current environment
 	command.Env = os.Environ()
@@ -92,10 +92,11 @@ func RunCmd(cmd []string, env Environment) (returnCode int) {
 	if err != nil {
 		var exitErr *exec.ExitError
 		if errors.As(err, &exitErr) {
-			// Return the captured output and the exit code
+			// Return the exit code
 			return exitErr.ExitCode()
 		}
-		// For non-ExitError cases, include the error in the output
+		// For non-ExitError cases, print the error and return 1
+		fmt.Fprintf(os.Stderr, "Error executing command: %v\n", err)
 		return 1
 	}
 
