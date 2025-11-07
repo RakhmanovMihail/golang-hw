@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -21,35 +20,42 @@ func RunCmd(cmd []string, env Environment) (returnCode int) {
 		return 1
 	}
 
-	// Get the absolute path of the command to prevent path traversal
-	path, err := exec.LookPath(cmd[0])
-	if err != nil {
-		return 1
+	// For the first command, try to find it in the system path
+	var path string
+	var err error
+
+	// Special handling for commands with paths
+	if filepath.IsAbs(cmd[0]) || strings.Contains(cmd[0], string(filepath.Separator)) {
+		// If it's an absolute path or contains path separators, use it as is
+		path = cmd[0]
+	} else {
+		// Otherwise, try to find it in the system path
+		path, err = exec.LookPath(cmd[0])
+		if err != nil {
+			return 1
+		}
 	}
 
-	// Additional security check: ensure the path is clean and doesn't contain any path traversal
-	if path != filepath.Clean(path) {
-		return 1
-	}
+	// Clean the path to prevent path traversal
+	path = filepath.Clean(path)
 
 	// Create the command with context
 	ctx := context.Background()
 	var command *exec.Cmd
 
-	switch len(cmd) {
-	case 1:
+	// Prepare the command with arguments
+	if len(cmd) > 1 {
+		command = exec.CommandContext(ctx, path, cmd[1:]...)
+	} else {
 		command = exec.CommandContext(ctx, path)
-	default:
-		// Use the resolved path but keep the original command name for display
-		args := make([]string, len(cmd))
-		copy(args, cmd[1:])
-		command = exec.CommandContext(ctx, path, args...)
 	}
 
 	// Set up the command's standard I/O
 	command.Stdin = os.Stdin
-	command.Stdout = os.Stdout
-	command.Stderr = os.Stderr
+	// Capture both stdout and stderr
+	var outputBuf strings.Builder
+	command.Stdout = &outputBuf
+	command.Stderr = &outputBuf
 
 	// Get current environment
 	command.Env = os.Environ()
@@ -80,17 +86,16 @@ func RunCmd(cmd []string, env Environment) (returnCode int) {
 		}
 	}
 
-	// Start the command and wait for it to finish
-	if err := command.Run(); err != nil {
+	// Run the command and capture its output
+	err = command.Run()
+	// Handle command execution errors
+	if err != nil {
 		var exitErr *exec.ExitError
 		if errors.As(err, &exitErr) {
-			if len(exitErr.Stderr) > 0 {
-				fmt.Fprintln(os.Stderr, string(exitErr.Stderr))
-			}
+			// Return the captured output and the exit code
 			return exitErr.ExitCode()
 		}
-		// For non-ExitError cases, print the error and return error code 1
-		fmt.Fprintln(os.Stderr, "Error executing command:", err)
+		// For non-ExitError cases, include the error in the output
 		return 1
 	}
 
