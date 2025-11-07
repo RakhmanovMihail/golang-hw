@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -13,8 +15,21 @@ func RunCmd(cmd []string, env Environment) (returnCode int) {
 		return 1
 	}
 
-	// Create the command
-	command := exec.Command(cmd[0], cmd[1:]...)
+	// Validate the command path
+	if _, err := exec.LookPath(cmd[0]); err != nil {
+		return 1
+	}
+
+	// Create the command with context
+	ctx := context.Background()
+	var command *exec.Cmd
+
+	switch len(cmd) {
+	case 1:
+		command = exec.CommandContext(ctx, cmd[0])
+	default:
+		command = exec.CommandContext(ctx, cmd[0], cmd[1:]...)
+	}
 
 	// Set up the command's standard I/O
 	command.Stdin = os.Stdin
@@ -52,12 +67,15 @@ func RunCmd(cmd []string, env Environment) (returnCode int) {
 
 	// Start the command and wait for it to finish
 	if err := command.Run(); err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
-			if exitErr.Stderr != nil {
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
+			if len(exitErr.Stderr) > 0 {
 				fmt.Fprintln(os.Stderr, string(exitErr.Stderr))
 			}
 			return exitErr.ExitCode()
 		}
+		// For non-ExitError cases, print the error and return error code 1
+		fmt.Fprintln(os.Stderr, "Error executing command:", err)
 		return 1
 	}
 
