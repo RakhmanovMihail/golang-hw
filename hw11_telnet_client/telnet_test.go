@@ -24,7 +24,6 @@ func TestClient_Connect(t *testing.T) {
 	}()
 
 	addr := server.Addr().(*net.TCPAddr)
-	// Исправлено: используем fmt.Sprintf для формирования адреса
 	address := fmt.Sprintf("127.0.0.1:%d", addr.Port)
 
 	client := NewTelnetClient(address, 1*time.Second, io.NopCloser(&bytes.Buffer{}), &bytes.Buffer{})
