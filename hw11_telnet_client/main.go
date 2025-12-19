@@ -37,7 +37,7 @@ func main() {
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
 	select {
-	case _ = <-done:
+	case <-done:
 		<-done // Ждем вторую горутину
 	case <-sigs:
 		fmt.Fprintln(os.Stderr, "\n...Interrupted")

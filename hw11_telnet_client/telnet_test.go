@@ -27,7 +27,7 @@ func TestClient_Connect(t *testing.T) {
 	// Исправлено: используем fmt.Sprintf для формирования адреса
 	address := fmt.Sprintf("127.0.0.1:%d", addr.Port)
 
-	client := New(address, 1*time.Second, io.NopCloser(&bytes.Buffer{}), &bytes.Buffer{})
+	client := NewTelnetClient(address, 1*time.Second, io.NopCloser(&bytes.Buffer{}), &bytes.Buffer{})
 	err = client.Connect()
 	require.NoError(t, err)
 }
@@ -52,7 +52,7 @@ func TestClient_SendEOF(t *testing.T) {
 	address := fmt.Sprintf("127.0.0.1:%d", addr.Port)
 
 	input := bytes.NewBufferString("hello")
-	client := New(address, 1*time.Second, io.NopCloser(input), &bytes.Buffer{})
+	client := NewTelnetClient(address, 1*time.Second, io.NopCloser(input), &bytes.Buffer{})
 
 	require.NoError(t, client.Connect())
 	err = client.Send()
@@ -79,7 +79,7 @@ func TestClient_Receive(t *testing.T) {
 	address := fmt.Sprintf("127.0.0.1:%d", addr.Port)
 
 	output := &bytes.Buffer{}
-	client := New(address, 1*time.Second, io.NopCloser(&bytes.Buffer{}), output)
+	client := NewTelnetClient(address, 1*time.Second, io.NopCloser(&bytes.Buffer{}), output)
 
 	require.NoError(t, client.Connect())
 	err = client.Receive()
