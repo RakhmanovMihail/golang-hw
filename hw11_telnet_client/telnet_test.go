@@ -57,8 +57,6 @@ func TestClient_SendEOF(t *testing.T) {
 	require.NoError(t, client.Connect())
 	err = client.Send()
 	<-done
-	// Тест ожидает nil, так как ваш Send() теперь возвращает nil при EOF (для успеха основного пайплайна)
-	// Если вы хотите проверить, что Send завершился, достаточно require.NoError
 	require.NoError(t, err)
 }
 
@@ -84,7 +82,6 @@ func TestClient_Receive(t *testing.T) {
 	require.NoError(t, client.Connect())
 	err = client.Receive()
 
-	// Receive() в вашей реализации возвращает nil при EOF, поэтому проверяем на NoError
 	require.NoError(t, err)
 	require.Equal(t, "world\n", output.String())
 }
