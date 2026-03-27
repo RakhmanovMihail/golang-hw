@@ -58,13 +58,20 @@ func NewHTTPServer(logger logger.ILogger, app Application, addr string) *HTTPSer
 func (s *HTTPServer) Start(ctx context.Context) error {
 	s.logger.Info(fmt.Sprintf("starting HTTP server at %s", s.addr))
 
+	errCh := make(chan error, 1)
 	go func() {
-		if err := s.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			s.logger.Error("server failed: " + err.Error())
-		}
+		errCh <- s.server.ListenAndServe()
 	}()
 
-	<-ctx.Done()
+	select {
+	case err := <-errCh:
+		if err != http.ErrServerClosed {
+			s.logger.Error("server failed: " + err.Error())
+			return err
+		}
+	case <-ctx.Done():
+	}
+
 	return nil
 }
 

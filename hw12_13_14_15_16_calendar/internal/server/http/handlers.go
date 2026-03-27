@@ -49,6 +49,7 @@ func (s *APIServer) CreateEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// NOTE: ID = 0 для всех создаваемых событий — это ограничение текущей архитектуры.
 	created, err := s.app.CreateEvent(ctx, 0, req.Title, req.StartTime, req.EndTime, int(req.UserId))
 	if err != nil {
 		if errors.Is(err, storage.ErrDateBusy) {
@@ -133,7 +134,7 @@ func (s *APIServer) DeleteEvent(w http.ResponseWriter, r *http.Request, id int64
 func (s *APIServer) GetEventsByDay(w http.ResponseWriter, r *http.Request, date openapi_types.Date) {
 	ctx := r.Context()
 
-	dateTime := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, time.UTC)
+	dateTime := toDate(date)
 	events, err := s.app.GetEventsByDay(ctx, dateTime)
 	if err != nil {
 		s.writeError(w, http.StatusInternalServerError, "failed to read events")
@@ -152,7 +153,7 @@ func (s *APIServer) GetEventsByDay(w http.ResponseWriter, r *http.Request, date 
 func (s *APIServer) GetEventsByWeek(w http.ResponseWriter, r *http.Request, date openapi_types.Date) {
 	ctx := r.Context()
 
-	dateTime := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, time.UTC)
+	dateTime := toDate(date)
 	events, err := s.app.GetEventsByWeek(ctx, dateTime)
 	if err != nil {
 		s.writeError(w, http.StatusInternalServerError, "failed to read events")
@@ -171,7 +172,7 @@ func (s *APIServer) GetEventsByWeek(w http.ResponseWriter, r *http.Request, date
 func (s *APIServer) GetEventsByMonth(w http.ResponseWriter, r *http.Request, date openapi_types.Date) {
 	ctx := r.Context()
 
-	dateTime := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, time.UTC)
+	dateTime := toDate(date)
 	events, err := s.app.GetEventsByMonth(ctx, dateTime)
 	if err != nil {
 		s.writeError(w, http.StatusInternalServerError, "failed to read events")
@@ -187,6 +188,11 @@ func (s *APIServer) GetEventsByMonth(w http.ResponseWriter, r *http.Request, dat
 }
 
 // Helper functions.
+
+// toDate converts openapi_types.Date to time.Time at midnight UTC.
+func toDate(dt openapi_types.Date) time.Time {
+	return time.Date(dt.Year(), dt.Month(), dt.Day(), 0, 0, 0, 0, time.UTC)
+}
 
 func (s *APIServer) writeJSON(w http.ResponseWriter, status int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
