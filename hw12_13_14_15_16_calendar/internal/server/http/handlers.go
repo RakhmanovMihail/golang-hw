@@ -49,14 +49,7 @@ func (s *APIServer) CreateEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	event := storage.Event{
-		Title:     req.Title,
-		StartTime: req.StartTime,
-		EndTime:   req.EndTime,
-		UserID:    int(req.UserId),
-	}
-
-	created, err := s.app.Storage.Create(ctx, &event)
+	created, err := s.app.CreateEvent(ctx, 0, req.Title, req.StartTime, req.EndTime, int(req.UserId))
 	if err != nil {
 		if errors.Is(err, storage.ErrDateBusy) {
 			s.writeError(w, http.StatusConflict, "date is busy")
@@ -96,31 +89,13 @@ func (s *APIServer) UpdateEvent(w http.ResponseWriter, r *http.Request, id int64
 		return
 	}
 
-	existing, err := s.app.GetEvent(ctx, uint64(id))
-	if err != nil {
-		if errors.Is(err, storage.ErrEventNotFound) {
-			s.writeError(w, http.StatusNotFound, "event not found")
-			return
-		}
-		s.writeError(w, http.StatusInternalServerError, "failed to get event")
-		return
-	}
-
-	newEvent := *existing
-	if req.Title != nil {
-		newEvent.Title = *req.Title
-	}
-	if req.StartTime != nil {
-		newEvent.StartTime = *req.StartTime
-	}
-	if req.EndTime != nil {
-		newEvent.EndTime = *req.EndTime
-	}
+	var userID *int
 	if req.UserId != nil {
-		newEvent.UserID = int(*req.UserId)
+		id := int(*req.UserId)
+		userID = &id
 	}
 
-	updated, err := s.app.Storage.Update(ctx, uint64(id), &newEvent)
+	updated, err := s.app.UpdateEvent(ctx, uint64(id), req.Title, req.StartTime, req.EndTime, userID)
 	if err != nil {
 		if errors.Is(err, storage.ErrEventNotFound) {
 			s.writeError(w, http.StatusNotFound, "event not found")
@@ -158,18 +133,16 @@ func (s *APIServer) DeleteEvent(w http.ResponseWriter, r *http.Request, id int64
 func (s *APIServer) GetEventsByDay(w http.ResponseWriter, r *http.Request, date openapi_types.Date) {
 	ctx := r.Context()
 
-	events, err := s.app.GetEvents(ctx)
+	dateTime := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, time.UTC)
+	events, err := s.app.GetEventsByDay(ctx, dateTime)
 	if err != nil {
 		s.writeError(w, http.StatusInternalServerError, "failed to read events")
 		return
 	}
 
-	filtered := make([]Event, 0)
+	filtered := make([]Event, 0, len(events))
 	for _, e := range events {
-		eventDate := e.StartTime.Format("2006-01-02")
-		if eventDate == date.String() {
-			filtered = append(filtered, eventToAPI(e))
-		}
+		filtered = append(filtered, eventToAPI(e))
 	}
 
 	s.writeJSON(w, http.StatusOK, filtered)
@@ -179,21 +152,16 @@ func (s *APIServer) GetEventsByDay(w http.ResponseWriter, r *http.Request, date 
 func (s *APIServer) GetEventsByWeek(w http.ResponseWriter, r *http.Request, date openapi_types.Date) {
 	ctx := r.Context()
 
-	events, err := s.app.GetEvents(ctx)
+	dateTime := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, time.UTC)
+	events, err := s.app.GetEventsByWeek(ctx, dateTime)
 	if err != nil {
 		s.writeError(w, http.StatusInternalServerError, "failed to read events")
 		return
 	}
 
-	targetTime := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, time.UTC)
-	startOfWeek := targetTime.AddDate(0, 0, -int(targetTime.Weekday()))
-	endOfWeek := startOfWeek.AddDate(0, 0, 7)
-
-	filtered := make([]Event, 0)
+	filtered := make([]Event, 0, len(events))
 	for _, e := range events {
-		if (e.StartTime.After(startOfWeek) || e.StartTime.Equal(startOfWeek)) && e.StartTime.Before(endOfWeek) {
-			filtered = append(filtered, eventToAPI(e))
-		}
+		filtered = append(filtered, eventToAPI(e))
 	}
 
 	s.writeJSON(w, http.StatusOK, filtered)
@@ -203,17 +171,16 @@ func (s *APIServer) GetEventsByWeek(w http.ResponseWriter, r *http.Request, date
 func (s *APIServer) GetEventsByMonth(w http.ResponseWriter, r *http.Request, date openapi_types.Date) {
 	ctx := r.Context()
 
-	events, err := s.app.GetEvents(ctx)
+	dateTime := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, time.UTC)
+	events, err := s.app.GetEventsByMonth(ctx, dateTime)
 	if err != nil {
 		s.writeError(w, http.StatusInternalServerError, "failed to read events")
 		return
 	}
 
-	filtered := make([]Event, 0)
+	filtered := make([]Event, 0, len(events))
 	for _, e := range events {
-		if e.StartTime.Year() == date.Year() && e.StartTime.Month() == date.Month() {
-			filtered = append(filtered, eventToAPI(e))
-		}
+		filtered = append(filtered, eventToAPI(e))
 	}
 
 	s.writeJSON(w, http.StatusOK, filtered)

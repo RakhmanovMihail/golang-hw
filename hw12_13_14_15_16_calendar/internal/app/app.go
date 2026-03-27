@@ -81,3 +81,59 @@ func (a *App) UpdateEvent(ctx context.Context, id uint64, title *string, startTi
 func (a *App) DeleteEvent(ctx context.Context, id uint64) error {
 	return a.Storage.Delete(ctx, id)
 }
+
+// GetEventsByDay returns events for a specific day.
+func (a *App) GetEventsByDay(ctx context.Context, date time.Time) ([]storage.Event, error) {
+	all, err := a.Storage.Read(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var result []storage.Event
+	for _, e := range all {
+		if e.StartTime.YearDay() == date.YearDay() && e.StartTime.Year() == date.Year() {
+			result = append(result, e)
+		}
+	}
+	return result, nil
+}
+
+// GetEventsByWeek returns events for a specific week.
+func (a *App) GetEventsByWeek(ctx context.Context, date time.Time) ([]storage.Event, error) {
+	all, err := a.Storage.Read(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// Calculate start of week (Monday)
+	startOfWeek := date.AddDate(0, 0, -int(date.Weekday())+1)
+	if startOfWeek.Weekday() == time.Sunday {
+		startOfWeek = startOfWeek.AddDate(0, 0, -6)
+	}
+	startOfWeek = time.Date(startOfWeek.Year(), startOfWeek.Month(), startOfWeek.Day(), 0, 0, 0, 0, date.Location())
+	endOfWeek := startOfWeek.AddDate(0, 0, 7)
+
+	var result []storage.Event
+	for _, e := range all {
+		if (e.StartTime.After(startOfWeek) || e.StartTime.Equal(startOfWeek)) && e.StartTime.Before(endOfWeek) {
+			result = append(result, e)
+		}
+	}
+	return result, nil
+}
+
+// GetEventsByMonth returns events for a specific month.
+func (a *App) GetEventsByMonth(ctx context.Context, date time.Time) ([]storage.Event, error) {
+	all, err := a.Storage.Read(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	var result []storage.Event
+	for _, e := range all {
+		if e.StartTime.Year() == date.Year() && e.StartTime.Month() == date.Month() {
+			result = append(result, e)
+		}
+	}
+	return result, nil
+}
