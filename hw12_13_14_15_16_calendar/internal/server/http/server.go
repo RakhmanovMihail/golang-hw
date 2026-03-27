@@ -6,17 +6,23 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/RakhmanovMihail/golang-hw/hw12_13_14_15_16_calendar/internal/app"
 	"github.com/RakhmanovMihail/golang-hw/hw12_13_14_15_16_calendar/internal/logger"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 )
-
-// Application is the interface for the application logic.
-type Application interface{}
 
 // HTTPServer represents an HTTP server.
 type HTTPServer struct {
 	server *http.Server
 	logger logger.ILogger
 	addr   string
+	router chi.Router
+}
+
+// Router returns the chi.Router instance.
+func (s *HTTPServer) Router() chi.Router {
+	return s.router
 }
 
 type responseWriter struct { // ← В ЭТОМ ЖЕ ФАЙЛЕ
@@ -36,13 +42,22 @@ func (rw *responseWriter) Write(b []byte) (int, error) {
 }
 
 // NewHTTPServer creates a new HTTP server instance.
-func NewHTTPServer(logger logger.ILogger, app Application, addr string) *HTTPServer {
-	router := http.NewServeMux()
-	router.HandleFunc("/", helloHandler(logger))
+func NewHTTPServer(logger logger.ILogger, app *app.App, addr string) *HTTPServer {
+	router := chi.NewRouter()
+
+	router.Use(middleware.Logger)
+	router.Use(loggingMiddleware(logger))
+
+	// Hello endpoint
+	router.Get("/", helloHandler(logger))
+
+	// API routes
+	apiServer := NewAPIServer(app)
+	RegisterAPIRoutes(router, apiServer)
 
 	srv := &http.Server{
 		Addr:         addr,
-		Handler:      loggingMiddleware(logger)(router),
+		Handler:      router,
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,
 	}
@@ -51,6 +66,7 @@ func NewHTTPServer(logger logger.ILogger, app Application, addr string) *HTTPSer
 		server: srv,
 		logger: logger,
 		addr:   addr,
+		router: router,
 	}
 }
 

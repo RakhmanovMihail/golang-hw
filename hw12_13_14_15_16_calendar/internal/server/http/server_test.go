@@ -1,11 +1,15 @@
 package internalhttp
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	app "github.com/RakhmanovMihail/golang-hw/hw12_13_14_15_16_calendar/internal/app"
+	"github.com/RakhmanovMihail/golang-hw/hw12_13_14_15_16_calendar/internal/logger"
+	"github.com/RakhmanovMihail/golang-hw/hw12_13_14_15_16_calendar/internal/storage"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -18,11 +22,33 @@ func (m *mockLogger) Info(msg string)  { m.messages = append(m.messages, msg) }
 func (m *mockLogger) Warn(msg string)  { m.messages = append(m.messages, msg) }
 func (m *mockLogger) Error(msg string) { m.messages = append(m.messages, msg) }
 
-type mockApp struct{}
+type mockStorage struct{}
+
+func (m *mockStorage) Create(ctx context.Context, event *storage.Event) (*storage.Event, error) {
+	return event, nil
+}
+
+func (m *mockStorage) Read(ctx context.Context) ([]storage.Event, error) {
+	return []storage.Event{}, nil
+}
+
+func (m *mockStorage) GetByID(ctx context.Context, id uint64) (*storage.Event, error) {
+	return nil, storage.ErrEventNotFound
+}
+
+func (m *mockStorage) Update(ctx context.Context, id uint64, event *storage.Event) (*storage.Event, error) {
+	return event, nil
+}
+
+func (m *mockStorage) Delete(ctx context.Context, id uint64) error {
+	return nil
+}
 
 func TestNewServer(t *testing.T) {
-	mockLog := &mockLogger{}
-	server := NewHTTPServer(mockLog, &mockApp{}, ":8080")
+	mockLog := &logger.Logger{Level: logger.LevelInfo}
+	mockStore := &mockStorage{}
+	serverApp := app.New(*mockLog, mockStore)
+	server := NewHTTPServer(mockLog, serverApp, ":8080")
 
 	assert.NotNil(t, server)
 	assert.Equal(t, ":8080", server.addr)
