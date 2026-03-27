@@ -32,4 +32,7 @@ install-lint-deps:
 lint: install-lint-deps
 	golangci-lint run ./...
 
-.PHONY: build run build-img run-img version test lint
+generate:
+	oapi-codegen -generate types,server,spec -package internalhttp -o internal/server/http/generated.go api/openapi.yaml
+
+.PHONY: build run build-img run-img version test lint generate
