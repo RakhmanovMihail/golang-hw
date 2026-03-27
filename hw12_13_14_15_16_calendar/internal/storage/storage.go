@@ -8,4 +8,5 @@ type Storage interface {
 	Read(ctx context.Context) ([]Event, error)
 	Update(ctx context.Context, id uint64, e *Event) (*Event, error)
 	Delete(ctx context.Context, id uint64) error
+	GetByID(ctx context.Context, id uint64) (*Event, error)
 }

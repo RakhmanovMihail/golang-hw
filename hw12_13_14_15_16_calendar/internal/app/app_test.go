@@ -114,6 +114,24 @@ func (s *testStorage) Delete(ctx context.Context, id uint64) error {
 	return nil
 }
 
+func (s *testStorage) GetByID(ctx context.Context, id uint64) (*storage.Event, error) {
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case <-time.After(10 * time.Millisecond):
+	}
+	if s.err != nil {
+		return nil, s.err
+	}
+	if event, exists := s.events[id]; exists {
+		return event, nil
+	}
+	return nil, storage.ErrEventNotFound
+}
+
 func TestApp_New(t *testing.T) {
 	loggerInst := loggerpkg.New(loggerpkg.LevelInfo)
 	storage := &testStorage{}
@@ -129,6 +147,9 @@ func TestApp_CreateEvent(t *testing.T) {
 		ctxSetup        func() context.Context
 		id              uint64
 		title           string
+		startTime       time.Time
+		endTime         time.Time
+		userID          int
 		wantErrContains string
 		wantEventsLen   int
 	}{
@@ -137,6 +158,9 @@ func TestApp_CreateEvent(t *testing.T) {
 			ctxSetup:        context.Background,
 			id:              1,
 			title:           "Встреча с клиентом",
+			startTime:       time.Date(2026, 3, 27, 10, 0, 0, 0, time.UTC),
+			endTime:         time.Date(2026, 3, 27, 11, 0, 0, 0, time.UTC),
+			userID:          1,
 			wantErrContains: "",
 			wantEventsLen:   1,
 		},
@@ -149,6 +173,9 @@ func TestApp_CreateEvent(t *testing.T) {
 			},
 			id:              1,
 			title:           "test",
+			startTime:       time.Date(2026, 3, 27, 10, 0, 0, 0, time.UTC),
+			endTime:         time.Date(2026, 3, 27, 11, 0, 0, 0, time.UTC),
+			userID:          1,
 			wantErrContains: "context deadline exceeded",
 			wantEventsLen:   0,
 		},
@@ -161,6 +188,9 @@ func TestApp_CreateEvent(t *testing.T) {
 			},
 			id:              1,
 			title:           "test",
+			startTime:       time.Date(2026, 3, 27, 10, 0, 0, 0, time.UTC),
+			endTime:         time.Date(2026, 3, 27, 11, 0, 0, 0, time.UTC),
+			userID:          1,
 			wantErrContains: "context canceled",
 			wantEventsLen:   0,
 		},
@@ -170,6 +200,9 @@ func TestApp_CreateEvent(t *testing.T) {
 			ctxSetup:        context.Background,
 			id:              1,
 			title:           "test",
+			startTime:       time.Date(2026, 3, 27, 10, 0, 0, 0, time.UTC),
+			endTime:         time.Date(2026, 3, 27, 11, 0, 0, 0, time.UTC),
+			userID:          1,
 			wantErrContains: "date already busy",
 			wantEventsLen:   0,
 		},
@@ -186,11 +219,11 @@ func TestApp_CreateEvent(t *testing.T) {
 			appInst := app.New(*loggerInst, storage)
 
 			ctx := tt.ctxSetup()
-			err := appInst.CreateEvent(ctx, tt.id, tt.title)
+			err := appInst.CreateEvent(ctx, tt.id, tt.title, tt.startTime, tt.endTime, tt.userID)
 
 			if tt.wantErrContains != "" {
 				require.Error(t, err)
-				assert.Contains(t, err.Error(), tt.wantErrContains)
+				require.ErrorContains(t, err, tt.wantErrContains)
 			} else {
 				require.NoError(t, err)
 			}
