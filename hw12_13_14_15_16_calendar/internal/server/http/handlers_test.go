@@ -229,6 +229,300 @@ func TestDeleteEvent_NotFound(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, w.Code)
 }
 
+// ==================== Critical: Тесты для методов by-day, by-week, by-month ====================
+
+func TestGetEventsByDay_Empty(t *testing.T) {
+	router, _ := setupTestRouter(t)
+
+	today := time.Now().UTC()
+	dateStr := today.Format("2006-01-02")
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/events/day/"+dateStr, nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, "[]\n", w.Body.String())
+}
+
+func TestGetEventsByDay_WithEvents(t *testing.T) {
+	router, app := setupTestRouter(t)
+
+	ctx := context.Background()
+	today := time.Now().UTC()
+	startTime := time.Date(today.Year(), today.Month(), today.Day(), 10, 0, 0, 0, time.UTC)
+	endTime := time.Date(today.Year(), today.Month(), today.Day(), 11, 0, 0, 0, time.UTC)
+
+	created, err := app.Storage.Create(ctx, &storage.Event{
+		Title:     "Day Event",
+		StartTime: startTime,
+		EndTime:   endTime,
+		UserID:    1,
+	})
+	require.NoError(t, err)
+
+	dateStr := today.Format("2006-01-02")
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/events/day/"+dateStr, nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var events []internalhttp.Event
+	err = json.Unmarshal(w.Body.Bytes(), &events)
+	require.NoError(t, err)
+	require.Len(t, events, 1)
+	assert.Equal(t, "Day Event", *events[0].Title)
+	assert.Equal(t, int64(created.ID), *events[0].Id)
+}
+
+func TestGetEventsByWeek_Empty(t *testing.T) {
+	router, _ := setupTestRouter(t)
+
+	today := time.Now().UTC()
+	dateStr := today.Format("2006-01-02")
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/events/week/"+dateStr, nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, "[]\n", w.Body.String())
+}
+
+func TestGetEventsByWeek_WithEvents(t *testing.T) {
+	router, app := setupTestRouter(t)
+
+	ctx := context.Background()
+	today := time.Now().UTC()
+	startTime := today.Add(time.Hour * 24) // Завтра
+	endTime := today.Add(time.Hour * 25)
+
+	created, err := app.Storage.Create(ctx, &storage.Event{
+		Title:     "Week Event",
+		StartTime: startTime,
+		EndTime:   endTime,
+		UserID:    1,
+	})
+	require.NoError(t, err)
+
+	dateStr := today.Format("2006-01-02")
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/events/week/"+dateStr, nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var events []internalhttp.Event
+	err = json.Unmarshal(w.Body.Bytes(), &events)
+	require.NoError(t, err)
+	require.Len(t, events, 1)
+	assert.Equal(t, "Week Event", *events[0].Title)
+	assert.Equal(t, int64(created.ID), *events[0].Id)
+}
+
+func TestGetEventsByMonth_Empty(t *testing.T) {
+	router, _ := setupTestRouter(t)
+
+	today := time.Now().UTC()
+	dateStr := today.Format("2006-01-02")
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/events/month/"+dateStr, nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, "[]\n", w.Body.String())
+}
+
+func TestGetEventsByMonth_WithEvents(t *testing.T) {
+	router, app := setupTestRouter(t)
+
+	ctx := context.Background()
+	today := time.Now().UTC()
+	// Создаем событие в следующем месяце
+	nextMonth := today.AddDate(0, 1, 0)
+	startTime := time.Date(nextMonth.Year(), nextMonth.Month(), 15, 10, 0, 0, 0, time.UTC)
+	endTime := time.Date(nextMonth.Year(), nextMonth.Month(), 15, 11, 0, 0, 0, time.UTC)
+
+	created, err := app.Storage.Create(ctx, &storage.Event{
+		Title:     "Month Event",
+		StartTime: startTime,
+		EndTime:   endTime,
+		UserID:    1,
+	})
+	require.NoError(t, err)
+
+	dateStr := nextMonth.Format("2006-01-02")
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/events/month/"+dateStr, nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var events []internalhttp.Event
+	err = json.Unmarshal(w.Body.Bytes(), &events)
+	require.NoError(t, err)
+	require.Len(t, events, 1)
+	assert.Equal(t, "Month Event", *events[0].Title)
+	assert.Equal(t, int64(created.ID), *events[0].Id)
+}
+
+// ==================== Important: Тесты для InvalidJSON ====================
+
+func TestCreateEvent_InvalidJSON(t *testing.T) {
+	router, _ := setupTestRouter(t)
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/events", bytes.NewReader([]byte("invalid json")))
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+
+	var resp internalhttp.ErrorResponse
+	err := json.Unmarshal(w.Body.Bytes(), &resp)
+	require.NoError(t, err)
+	assert.NotNil(t, resp.Error)
+	assert.Contains(t, *resp.Error, "invalid request body")
+}
+
+func TestUpdateEvent_InvalidJSON(t *testing.T) {
+	router, app := setupTestRouter(t)
+
+	// Сначала создадим событие
+	ctx := context.Background()
+	now := time.Now().UTC()
+	created, err := app.Storage.Create(ctx, &storage.Event{
+		Title:     "Original",
+		StartTime: now.Add(time.Hour),
+		EndTime:   now.Add(2 * time.Hour),
+		UserID:    1,
+	})
+	require.NoError(t, err)
+
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/events/"+strconv.Itoa(int(created.ID)), bytes.NewReader([]byte("invalid json")))
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+
+	var resp internalhttp.ErrorResponse
+	err = json.Unmarshal(w.Body.Bytes(), &resp)
+	require.NoError(t, err)
+	assert.NotNil(t, resp.Error)
+	assert.Contains(t, *resp.Error, "invalid request body")
+}
+
+// ==================== Important: Тест для конфликта дат при обновлении ====================
+
+func TestUpdateEvent_DateBusy(t *testing.T) {
+	router, app := setupTestRouter(t)
+
+	ctx := context.Background()
+	now := time.Now().UTC()
+
+	// Создаем первое событие
+	_, err := app.Storage.Create(ctx, &storage.Event{
+		Title:     "Event 1",
+		StartTime: now.Add(time.Hour),
+		EndTime:   now.Add(2 * time.Hour),
+		UserID:    1,
+	})
+	require.NoError(t, err)
+
+	// Создаем второе событие с другим временем
+	event2, err := app.Storage.Create(ctx, &storage.Event{
+		Title:     "Event 2",
+		StartTime: now.Add(3 * time.Hour),
+		EndTime:   now.Add(4 * time.Hour),
+		UserID:    1,
+	})
+	require.NoError(t, err)
+
+	// Пытаемся обновить event2 так, чтобы он пересекался с event1
+	update := internalhttp.UpdateEventRequest{
+		Title:     ptr("Updated Event 2"),
+		StartTime: ptr(now.Add(time.Hour)), // Пересекается с event1
+		EndTime:   ptr(now.Add(2 * time.Hour)),
+	}
+
+	body, _ := json.Marshal(update)
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/events/"+strconv.Itoa(int(event2.ID)), bytes.NewReader(body))
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusConflict, w.Code)
+}
+
+// ==================== Important: Тест GetEvents с событиями ====================
+
+func TestGetEvents_WithEvents(t *testing.T) {
+	router, app := setupTestRouter(t)
+
+	ctx := context.Background()
+	now := time.Now().UTC()
+
+	// Создаем несколько событий
+	event1, err := app.Storage.Create(ctx, &storage.Event{
+		Title:     "Event 1",
+		StartTime: now.Add(time.Hour),
+		EndTime:   now.Add(2 * time.Hour),
+		UserID:    1,
+	})
+	require.NoError(t, err)
+
+	event2, err := app.Storage.Create(ctx, &storage.Event{
+		Title:     "Event 2",
+		StartTime: now.Add(3 * time.Hour),
+		EndTime:   now.Add(4 * time.Hour),
+		UserID:    2,
+	})
+	require.NoError(t, err)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/events", nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var events []internalhttp.Event
+	err = json.Unmarshal(w.Body.Bytes(), &events)
+	require.NoError(t, err)
+	require.Len(t, events, 2)
+
+	// Проверяем, что оба события присутствуют
+	eventIDs := make(map[int64]bool)
+	for _, e := range events {
+		eventIDs[*e.Id] = true
+	}
+	assert.True(t, eventIDs[int64(event1.ID)])
+	assert.True(t, eventIDs[int64(event2.ID)])
+}
+
+// ==================== Helper functions ====================
+
+// createTestEvent создает тестовое событие и возвращает его ID
+func createTestEvent(t *testing.T, app *app.App, title string, startTime, endTime time.Time, userID int) uint64 {
+	t.Helper()
+
+	ctx := context.Background()
+	event, err := app.Storage.Create(ctx, &storage.Event{
+		Title:     title,
+		StartTime: startTime,
+		EndTime:   endTime,
+		UserID:    userID,
+	})
+	require.NoError(t, err)
+	return event.ID
+}
+
 func ptr[T any](v T) *T {
 	return &v
 }
