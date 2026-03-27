@@ -75,11 +75,11 @@ func TestLoggingMiddleware(t *testing.T) {
 
 			middleware := loggingMiddleware(testLog)
 
-			handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(tt.statusCode)
 			})
 
-			req := httptest.NewRequest(tt.method, tt.path, nil)
+			req := httptest.NewRequestWithContext(t.Context(), tt.method, tt.path, nil)
 			if tt.forwardedFor != "" {
 				req.Header.Set("X-Forwarded-For", tt.forwardedFor)
 			}
@@ -153,7 +153,7 @@ func TestGetClientIP(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest("GET", "/", nil)
+			req := httptest.NewRequestWithContext(t.Context(), "GET", "/", nil)
 			for header, value := range tt.headers {
 				req.Header.Set(header, value)
 			}

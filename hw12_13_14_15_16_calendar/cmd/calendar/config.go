@@ -2,14 +2,14 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/BurntSushi/toml"
 	logger "github.com/RakhmanovMihail/golang-hw/hw12_13_14_15_16_calendar/internal/logger"
-	"log"
 )
 
-// Локальный тип для TOML десериализации
+// Локальный тип для TOML десериализации.
 type tomlLevel logger.Level
 
 func (l *tomlLevel) UnmarshalTOML(data []byte) error {
@@ -26,20 +26,20 @@ func (l *tomlLevel) UnmarshalTOML(data []byte) error {
 
 type Config struct {
 	Logger  LoggerConf    `toml:"logger"`
-	Api     ApiConfig     `toml:"api"`
+	API     APIConfig     `toml:"api"`
 	Storage StorageConfig `toml:"storage"`
 }
 
-// Конвертеры уровней
+// Конвертеры уровней.
 func (c *Config) LoggerLevel() logger.Level {
 	return logger.Level(c.Logger.Level)
 }
 
-func (c *Config) ApiLevel() logger.Level {
-	return logger.Level(c.Api.Level)
+func (c *Config) APILevel() logger.Level {
+	return logger.Level(c.API.Level)
 }
 
-type ApiConfig struct {
+type APIConfig struct {
 	Level tomlLevel `toml:"level"`
 	Host  string    `toml:"host"`
 	Port  string    `toml:"port"`

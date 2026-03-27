@@ -3,13 +3,16 @@ package internalhttp
 import (
 	"context"
 	"fmt"
-	"github.com/RakhmanovMihail/golang-hw/hw12_13_14_15_16_calendar/internal/logger"
 	"net/http"
 	"time"
+
+	"github.com/RakhmanovMihail/golang-hw/hw12_13_14_15_16_calendar/internal/logger"
 )
 
+// Application is the interface for the application logic.
 type Application interface{}
 
+// Server represents an HTTP server.
 type Server struct {
 	server *http.Server
 	logger logger.ILogger
@@ -32,6 +35,7 @@ func (rw *responseWriter) Write(b []byte) (int, error) {
 	return rw.ResponseWriter.Write(b)
 }
 
+// NewServer creates a new HTTP server instance.
 func NewServer(logger logger.ILogger, app Application, addr string) *Server {
 	router := http.NewServeMux()
 	router.HandleFunc("/", helloHandler(logger))
@@ -50,6 +54,7 @@ func NewServer(logger logger.ILogger, app Application, addr string) *Server {
 	}
 }
 
+// Start starts the HTTP server.
 func (s *Server) Start(ctx context.Context) error {
 	s.logger.Info(fmt.Sprintf("starting HTTP server at %s", s.addr))
 
@@ -63,6 +68,7 @@ func (s *Server) Start(ctx context.Context) error {
 	return nil
 }
 
+// Stop stops the HTTP server gracefully.
 func (s *Server) Stop(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
@@ -84,10 +90,12 @@ func queryString(r *http.Request) string {
 }
 
 func helloHandler(logger logger.ILogger) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, _ *http.Request) {
 		logger.Debug("hello endpoint called")
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("hello-world"))
+		if _, err := w.Write([]byte("hello-world")); err != nil {
+			logger.Error("write response: " + err.Error())
+		}
 	}
 }

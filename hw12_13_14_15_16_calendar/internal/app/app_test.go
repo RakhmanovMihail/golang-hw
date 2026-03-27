@@ -134,7 +134,7 @@ func TestApp_CreateEvent(t *testing.T) {
 	}{
 		{
 			name:            "успешное создание события",
-			ctxSetup:        func() context.Context { return context.Background() },
+			ctxSetup:        context.Background,
 			id:              1,
 			title:           "Встреча с клиентом",
 			wantErrContains: "",
@@ -143,7 +143,8 @@ func TestApp_CreateEvent(t *testing.T) {
 		{
 			name: "контекст с таймаутом",
 			ctxSetup: func() context.Context {
-				ctx, _ := context.WithTimeout(context.Background(), 5*time.Millisecond)
+				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Millisecond)
+				t.Cleanup(cancel)
 				return ctx
 			},
 			id:              1,
@@ -166,7 +167,7 @@ func TestApp_CreateEvent(t *testing.T) {
 		{
 			name:            "ошибка storage",
 			setupStorage:    func(ts *testStorage) { ts.err = storage.ErrDateBusy },
-			ctxSetup:        func() context.Context { return context.Background() },
+			ctxSetup:        context.Background,
 			id:              1,
 			title:           "test",
 			wantErrContains: "date already busy",

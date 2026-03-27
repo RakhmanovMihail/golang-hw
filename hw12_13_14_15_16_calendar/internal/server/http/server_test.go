@@ -34,7 +34,7 @@ func TestHelloHandler(t *testing.T) {
 	handler := helloHandler(mockLog)
 
 	rr := httptest.NewRecorder()
-	req := httptest.NewRequest("GET", "/", nil)
+	req := httptest.NewRequestWithContext(t.Context(), "GET", "/", nil)
 
 	handler.ServeHTTP(rr, req)
 
@@ -57,7 +57,7 @@ func TestQueryString(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.path, func(t *testing.T) {
-			req := httptest.NewRequest("GET", tt.path, nil)
+			req := httptest.NewRequestWithContext(t.Context(), "GET", tt.path, nil)
 			result := queryString(req)
 			assert.Equal(t, tt.expected, result)
 		})

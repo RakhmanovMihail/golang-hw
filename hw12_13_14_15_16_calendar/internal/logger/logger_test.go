@@ -73,6 +73,7 @@ func TestLogger_LevelFiltering(t *testing.T) {
 }
 
 func captureOutput(t *testing.T, f func()) string {
+	t.Helper()
 	r, w, err := os.Pipe()
 	assert.NoError(t, err)
 
@@ -90,11 +91,15 @@ func captureOutput(t *testing.T, f func()) string {
 
 	f() // Вызываем logger
 
-	w.Close()
+	if closeErr := w.Close(); closeErr != nil {
+		t.Logf("warning: failed to close write pipe: %v", closeErr)
+	}
 	os.Stdout = oldStdout
 
 	<-done // Ждём завершения чтения
-	r.Close()
+	if closeErr := r.Close(); closeErr != nil {
+		t.Logf("warning: failed to close read pipe: %v", closeErr)
+	}
 
 	return buf.String()
 }

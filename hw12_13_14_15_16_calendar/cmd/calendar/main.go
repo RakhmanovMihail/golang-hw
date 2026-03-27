@@ -12,16 +12,14 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
-	"github.com/pressly/goose/v3"
-
 	app "github.com/RakhmanovMihail/golang-hw/hw12_13_14_15_16_calendar/internal/app"
 	loggerpkg "github.com/RakhmanovMihail/golang-hw/hw12_13_14_15_16_calendar/internal/logger"
 	internalhttp "github.com/RakhmanovMihail/golang-hw/hw12_13_14_15_16_calendar/internal/server/http"
 	storage "github.com/RakhmanovMihail/golang-hw/hw12_13_14_15_16_calendar/internal/storage"
 	memorystorage "github.com/RakhmanovMihail/golang-hw/hw12_13_14_15_16_calendar/internal/storage/memory"
-	migrations "github.com/RakhmanovMihail/golang-hw/hw12_13_14_15_16_calendar/migrations"
 	psqlstorage "github.com/RakhmanovMihail/golang-hw/hw12_13_14_15_16_calendar/internal/storage/sql"
-	_ "github.com/lib/pq"
+	migrations "github.com/RakhmanovMihail/golang-hw/hw12_13_14_15_16_calendar/migrations"
+	"github.com/pressly/goose/v3"
 )
 
 var configPath string
@@ -37,38 +35,41 @@ func main() {
 		return
 	}
 
+	if err := run(); err != nil {
+		log.Fatalf("fatal error: %v", err)
+	}
+}
+
+func run() error {
 	cfg := &Config{}
 	_, err := toml.DecodeFile(configPath, cfg)
 	if err != nil {
-		log.Fatalf("config %s: %v", configPath, err)
+		return fmt.Errorf("config %s: %w", configPath, err)
 	}
 
 	logg := loggerpkg.New(cfg.LoggerLevel())
 
 	var store storage.Storage
 	switch cfg.Storage.Mode {
-	case "memory":
+	case StorageModeMemory:
 		store = memorystorage.New()
-	case "postgres":
+	case StorageModeSQL:
 		// Миграции ПЕРЕД созданием storage!
 		if err := runMigrations(logg, cfg.Storage.DSN); err != nil {
-			logg.Error(fmt.Sprintf("migrations: %v", err))
-			os.Exit(1)
+			return fmt.Errorf("migrations: %w", err)
 		}
 
 		storeSQL, err := psqlstorage.New(cfg.Storage.DSN)
 		if err != nil {
-			logg.Error(fmt.Sprintf("postgres: %v", err))
-			os.Exit(1)
+			return fmt.Errorf("postgres: %w", err)
 		}
 		store = storeSQL
 	default:
-		logg.Error(fmt.Sprintf("unknown storage: %s", cfg.Storage.Mode))
-		os.Exit(1)
+		return fmt.Errorf("unknown storage: %s", cfg.Storage.Mode)
 	}
 
 	calendar := app.New(*logg, store)
-	server := internalhttp.NewServer(logg, calendar, fmt.Sprintf("%s:%s", cfg.Api.Host, cfg.Api.Port))
+	server := internalhttp.NewServer(logg, calendar, fmt.Sprintf("%s:%s", cfg.API.Host, cfg.API.Port))
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
 	defer cancel()
@@ -84,9 +85,10 @@ func main() {
 
 	logg.Info("calendar is running...")
 	if err := server.Start(ctx); err != nil {
-		logg.Error(fmt.Sprintf("server start: %v", err))
-		os.Exit(1)
+		return fmt.Errorf("server start: %w", err)
 	}
+
+	return nil
 }
 
 func runMigrations(logger *loggerpkg.Logger, dsn string) error {
@@ -94,7 +96,11 @@ func runMigrations(logger *loggerpkg.Logger, dsn string) error {
 	if err != nil {
 		return fmt.Errorf("open db: %w", err)
 	}
-	defer db.Close()
+	defer func() {
+		if closeErr := db.Close(); closeErr != nil {
+			logger.Error(fmt.Sprintf("db close: %v", closeErr))
+		}
+	}()
 
 	goose.SetBaseFS(migrations.FS)
 

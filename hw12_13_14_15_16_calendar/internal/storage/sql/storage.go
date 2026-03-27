@@ -6,16 +6,16 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/jmoiron/sqlx"
-	_ "github.com/lib/pq"
-
 	"github.com/RakhmanovMihail/golang-hw/hw12_13_14_15_16_calendar/internal/storage"
+	"github.com/jmoiron/sqlx"
 )
 
+// Store is a SQL implementation of storage.Storage.
 type Store struct {
 	db *sqlx.DB
 }
 
+// New creates a new Store instance.
 func New(dsn string) (storage.Storage, error) {
 	db, err := sqlx.Connect("postgres", dsn)
 	if err != nil {
@@ -25,17 +25,20 @@ func New(dsn string) (storage.Storage, error) {
 	return &Store{db: db}, nil
 }
 
+// Connect checks the database connection.
 func (s *Store) Connect(ctx context.Context) error {
 	return s.db.PingContext(ctx)
 }
 
-func (s *Store) Close(ctx context.Context) error {
+// Close closes the database connection.
+func (s *Store) Close(_ context.Context) error {
 	return s.db.Close()
 }
 
+// Create creates a new event in the database.
 func (s *Store) Create(ctx context.Context, e *storage.Event) (*storage.Event, error) {
 	query := `
-       INSERT INTO events (title, start_time, end_time, user_id) 
+       INSERT INTO events (title, start_time, end_time, user_id)
        VALUES ($1, $2, $3, $4)
        RETURNING id, title, start_time, end_time, user_id`
 
@@ -51,6 +54,7 @@ func (s *Store) Create(ctx context.Context, e *storage.Event) (*storage.Event, e
 	return created, nil
 }
 
+// Read returns all events from the database.
 func (s *Store) Read(ctx context.Context) ([]storage.Event, error) {
 	query := `SELECT id, title, start_time, end_time, user_id FROM events ORDER BY start_time`
 
@@ -63,9 +67,10 @@ func (s *Store) Read(ctx context.Context) ([]storage.Event, error) {
 	return events, nil
 }
 
+// Update updates an existing event in the database.
 func (s *Store) Update(ctx context.Context, id uint64, e *storage.Event) (*storage.Event, error) {
 	query := `
-        UPDATE events 
+        UPDATE events
         SET title = $1, start_time = $2, end_time = $3, user_id = $4
         WHERE id = $5
         RETURNING id, title, start_time, end_time, user_id`
@@ -75,7 +80,6 @@ func (s *Store) Update(ctx context.Context, id uint64, e *storage.Event) (*stora
 		e.Title, e.StartTime, e.EndTime, e.UserID, id).
 		Scan(&updated.ID, &updated.Title, &updated.StartTime,
 			&updated.EndTime, &updated.UserID)
-
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, storage.ErrEventNotFound
@@ -86,6 +90,7 @@ func (s *Store) Update(ctx context.Context, id uint64, e *storage.Event) (*stora
 	return updated, nil
 }
 
+// Delete deletes an event from the database.
 func (s *Store) Delete(ctx context.Context, id uint64) error {
 	query := `DELETE FROM events WHERE id = $1 RETURNING id`
 
@@ -101,6 +106,7 @@ func (s *Store) Delete(ctx context.Context, id uint64) error {
 	return nil
 }
 
+// GetByID returns an event by ID from the database.
 func (s *Store) GetByID(ctx context.Context, id uint64) (*storage.Event, error) {
 	query := `SELECT id, title, start_time, end_time, user_id FROM events WHERE id = $1`
 

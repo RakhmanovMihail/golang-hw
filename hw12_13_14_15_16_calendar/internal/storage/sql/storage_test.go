@@ -14,7 +14,7 @@ import (
 )
 
 func TestNew(t *testing.T) {
-	dsn := "postgres://user:pass@localhost/db?sslmode=disable"
+	dsn := "postgres://user:pass@localhost/db?sslmode=disable" //nolint:gosec // Test DSN
 	_, err := New(dsn)
 	assert.Error(t, err)
 }

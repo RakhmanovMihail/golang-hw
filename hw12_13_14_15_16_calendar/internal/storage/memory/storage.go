@@ -8,6 +8,7 @@ import (
 	"github.com/RakhmanovMihail/golang-hw/hw12_13_14_15_16_calendar/internal/storage"
 )
 
+// Store is an in-memory implementation of storage.Storage.
 type Store struct {
 	mu     sync.RWMutex
 	events map[uint64]storage.Event
@@ -21,6 +22,7 @@ func New() storage.Storage {
 	}
 }
 
+// Create creates a new event in the store.
 func (s *Store) Create(ctx context.Context, e *storage.Event) (*storage.Event, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -36,7 +38,8 @@ func (s *Store) Create(ctx context.Context, e *storage.Event) (*storage.Event, e
 	return e, nil
 }
 
-func (s *Store) Read(ctx context.Context) ([]storage.Event, error) {
+// Read returns all events from the store.
+func (s *Store) Read(_ context.Context) ([]storage.Event, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -52,6 +55,7 @@ func (s *Store) Read(ctx context.Context) ([]storage.Event, error) {
 	return events, nil
 }
 
+// Update updates an existing event in the store.
 func (s *Store) Update(ctx context.Context, id uint64, e *storage.Event) (*storage.Event, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -70,6 +74,7 @@ func (s *Store) Update(ctx context.Context, id uint64, e *storage.Event) (*stora
 	return e, nil
 }
 
+// Delete deletes an event from the store.
 func (s *Store) Delete(ctx context.Context, id uint64) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -82,6 +87,7 @@ func (s *Store) Delete(ctx context.Context, id uint64) error {
 	return nil
 }
 
+// GetByID returns an event by ID.
 func (s *Store) GetByID(ctx context.Context, id uint64) (*storage.Event, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()

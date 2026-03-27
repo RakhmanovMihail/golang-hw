@@ -2,6 +2,7 @@ package storage
 
 import "context"
 
+// Storage is the interface for event storage.
 type Storage interface {
 	Create(ctx context.Context, e *Event) (*Event, error)
 	Read(ctx context.Context) ([]Event, error)

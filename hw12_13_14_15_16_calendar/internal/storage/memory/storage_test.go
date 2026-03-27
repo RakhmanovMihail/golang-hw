@@ -112,7 +112,6 @@ func TestStore_SortRead(t *testing.T) {
 		{"Event 2", now.Add(2 * time.Hour)},
 	}
 
-	var createdIDs []uint64
 	for _, data := range eventsData {
 		e := &storage.Event{
 			Title:     data.title,
@@ -120,9 +119,8 @@ func TestStore_SortRead(t *testing.T) {
 			EndTime:   data.start.Add(time.Hour),
 			UserID:    123,
 		}
-		created, err := store.Create(ctx, e)
+		_, err := store.Create(ctx, e)
 		require.NoError(t, err)
-		createdIDs = append(createdIDs, created.ID)
 	}
 
 	// Сортировка по StartTime

@@ -2,13 +2,12 @@ package internalhttp
 
 import (
 	"fmt"
-	"github.com/RakhmanovMihail/golang-hw/hw12_13_14_15_16_calendar/internal/logger"
 	"net"
 	"net/http"
 	"strings"
 	"time"
 
-	_ "github.com/RakhmanovMihail/golang-hw/hw12_13_14_15_16_calendar/internal/logger"
+	"github.com/RakhmanovMihail/golang-hw/hw12_13_14_15_16_calendar/internal/logger"
 )
 
 func loggingMiddleware(logger logger.ILogger) func(http.Handler) http.Handler {
