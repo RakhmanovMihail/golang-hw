@@ -21,12 +21,12 @@ type testStorage struct {
 var _ storage.Storage = (*testStorage)(nil)
 
 func (s *testStorage) Create(ctx context.Context, event *storage.Event) (*storage.Event, error) {
-	// ✅ ПРЯМАЯ проверка ДО time.After!
+	// Прямая проверка ДО time.After!
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
 
-	// ✅ Большие задержки для надёжности
+	// Большие задержки для надёжности
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()

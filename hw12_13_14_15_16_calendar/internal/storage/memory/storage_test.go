@@ -45,7 +45,7 @@ func TestStore_CRUD(t *testing.T) {
 	// UPDATE - НЕ пересекается
 	event2 := &storage.Event{
 		Title:     "Updated Event",
-		StartTime: now.Add(4 * time.Hour), // ✅ После первого события
+		StartTime: now.Add(4 * time.Hour), // После первого события
 		EndTime:   now.Add(5 * time.Hour),
 		UserID:    123,
 	}
@@ -77,17 +77,17 @@ func TestStore_Overlap(t *testing.T) {
 	_, err := store.Create(ctx, event1)
 	require.NoError(t, err)
 
-	// ✅ Пересекающееся - ErrDateBusy
+	// Пересекающееся - ErrDateBusy
 	overlap1 := &storage.Event{
 		Title:     "Overlap 1",
 		StartTime: now.Add(1*time.Hour + 30*time.Minute),
 		EndTime:   now.Add(1*time.Hour + 45*time.Minute),
-		UserID:    456, // ✅ Любой UserID - overlap для ВСЕХ
+		UserID:    456, // Любой UserID - overlap для ВСЕХ
 	}
 	_, err = store.Create(ctx, overlap1)
 	assert.ErrorIs(t, err, storage.ErrDateBusy)
 
-	// ✅ НЕ пересекающееся
+	// НЕ пересекающееся
 	nonOverlap := &storage.Event{
 		Title:     "Non Overlap",
 		StartTime: now.Add(3 * time.Hour),
@@ -125,7 +125,7 @@ func TestStore_SortRead(t *testing.T) {
 		createdIDs = append(createdIDs, created.ID)
 	}
 
-	// ✅ Сортировка по StartTime
+	// Сортировка по StartTime
 	readEvents, err := store.Read(ctx)
 	require.NoError(t, err)
 	assert.Len(t, readEvents, 3)
@@ -157,7 +157,7 @@ func TestStore_ContextIgnored(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	// ✅ Memory store игнорирует контекст (нет select)
+	// Memory store игнорирует контекст (нет select)
 	_, err := store.Create(ctx, &storage.Event{})
-	assert.NoError(t, err) // ✅ Memory НЕ отменяется
+	assert.NoError(t, err) // Memory НЕ отменяется
 }
