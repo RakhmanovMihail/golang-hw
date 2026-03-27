@@ -12,8 +12,8 @@ import (
 // Application is the interface for the application logic.
 type Application interface{}
 
-// Server represents an HTTP server.
-type Server struct {
+// HTTPServer represents an HTTP server.
+type HTTPServer struct {
 	server *http.Server
 	logger logger.ILogger
 	addr   string
@@ -35,8 +35,8 @@ func (rw *responseWriter) Write(b []byte) (int, error) {
 	return rw.ResponseWriter.Write(b)
 }
 
-// NewServer creates a new HTTP server instance.
-func NewServer(logger logger.ILogger, app Application, addr string) *Server {
+// NewHTTPServer creates a new HTTP server instance.
+func NewHTTPServer(logger logger.ILogger, app Application, addr string) *HTTPServer {
 	router := http.NewServeMux()
 	router.HandleFunc("/", helloHandler(logger))
 
@@ -47,7 +47,7 @@ func NewServer(logger logger.ILogger, app Application, addr string) *Server {
 		WriteTimeout: 10 * time.Second,
 	}
 
-	return &Server{
+	return &HTTPServer{
 		server: srv,
 		logger: logger,
 		addr:   addr,
@@ -55,7 +55,7 @@ func NewServer(logger logger.ILogger, app Application, addr string) *Server {
 }
 
 // Start starts the HTTP server.
-func (s *Server) Start(ctx context.Context) error {
+func (s *HTTPServer) Start(ctx context.Context) error {
 	s.logger.Info(fmt.Sprintf("starting HTTP server at %s", s.addr))
 
 	go func() {
@@ -69,7 +69,7 @@ func (s *Server) Start(ctx context.Context) error {
 }
 
 // Stop stops the HTTP server gracefully.
-func (s *Server) Stop(ctx context.Context) error {
+func (s *HTTPServer) Stop(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 

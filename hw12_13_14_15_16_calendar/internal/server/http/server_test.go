@@ -22,7 +22,7 @@ type mockApp struct{}
 
 func TestNewServer(t *testing.T) {
 	mockLog := &mockLogger{}
-	server := NewServer(mockLog, &mockApp{}, ":8080")
+	server := NewHTTPServer(mockLog, &mockApp{}, ":8080")
 
 	assert.NotNil(t, server)
 	assert.Equal(t, ":8080", server.addr)

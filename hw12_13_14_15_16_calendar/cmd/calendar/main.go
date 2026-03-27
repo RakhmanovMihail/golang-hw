@@ -69,7 +69,7 @@ func run() error {
 	}
 
 	calendar := app.New(*logg, store)
-	server := internalhttp.NewServer(logg, calendar, fmt.Sprintf("%s:%s", cfg.API.Host, cfg.API.Port))
+	server := internalhttp.NewHTTPServer(logg, calendar, fmt.Sprintf("%s:%s", cfg.API.Host, cfg.API.Port))
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
 	defer cancel()
