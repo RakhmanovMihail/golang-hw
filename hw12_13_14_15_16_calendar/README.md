@@ -13,3 +13,52 @@
 - `hw16_calendar` (от `hw15_calendar`) -> Merge Request в `hw15_calendar` (если уже вмержена, то в `master`)
 
 **Домашнее задание не принимается, если не принято ДЗ, предшедствующее ему.**
+
+## API
+
+API описано в спецификации OpenAPI V3: [`api/openapi.yaml`](api/openapi.yaml)
+
+### Запуск сервера
+
+```bash
+make run
+# или
+go run cmd/calendar/main.go -config configs/config.toml
+```
+
+### Генерация кода
+
+```bash
+make generate
+```
+
+### Endpoints
+
+- `GET /api/v1/events` - Получить все события
+- `POST /api/v1/events` - Создать событие
+- `GET /api/v1/events/{id}` - Получить событие по ID
+- `PUT /api/v1/events/{id}` - Обновить событие
+- `DELETE /api/v1/events/{id}` - Удалить событие
+- `GET /api/v1/events/day/{date}` - Получить события на день
+- `GET /api/v1/events/week/{date}` - Получить события на неделю
+- `GET /api/v1/events/month/{date}` - Получить события на месяц
+
+### Формат запросов
+
+#### Создание события
+```json
+{
+  "title": "Встреча",
+  "start_time": "2026-03-27T10:00:00Z",
+  "end_time": "2026-03-27T11:00:00Z",
+  "user_id": 1,
+  "description": "Описание встречи",
+  "notify_before": 30
+}
+```
+
+### Тесты
+
+```bash
+go test -v ./...
+```
