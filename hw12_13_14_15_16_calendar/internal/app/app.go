@@ -23,15 +23,15 @@ func New(logger logger.Logger, storage storage.Storage) *App {
 }
 
 // CreateEvent creates a new event.
-func (a *App) CreateEvent(ctx context.Context, id uint64, title string, startTime, endTime time.Time, userID int) error {
-	_, err := a.Storage.Create(ctx, &storage.Event{
+func (a *App) CreateEvent(ctx context.Context, id uint64, title string, startTime, endTime time.Time, userID int) (*storage.Event, error) {
+	event, err := a.Storage.Create(ctx, &storage.Event{
 		ID:        id,
 		Title:     title,
 		StartTime: startTime,
 		EndTime:   endTime,
 		UserID:    userID,
 	})
-	return err
+	return event, err
 }
 
 // GetEvents returns all events.
@@ -54,6 +54,9 @@ func (a *App) UpdateEvent(ctx context.Context, id uint64, title *string, startTi
 	// Update fields if provided
 	newEvent := *existing
 	if title != nil {
+		if *title == "" {
+			return nil, storage.ErrInvalidEvent
+		}
 		newEvent.Title = *title
 	}
 	if startTime != nil {
@@ -64,6 +67,11 @@ func (a *App) UpdateEvent(ctx context.Context, id uint64, title *string, startTi
 	}
 	if userID != nil {
 		newEvent.UserID = *userID
+	}
+
+	// Validate: EndTime must be after StartTime
+	if newEvent.EndTime.Before(newEvent.StartTime) || newEvent.EndTime.Equal(newEvent.StartTime) {
+		return nil, storage.ErrInvalidEvent
 	}
 
 	return a.Storage.Update(ctx, id, &newEvent)

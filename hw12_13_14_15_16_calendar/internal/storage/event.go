@@ -11,6 +11,8 @@ var (
 	ErrEventNotFound = errors.New("event not found")
 	// ErrDateBusy is returned when a date is already busy.
 	ErrDateBusy = errors.New("date already busy")
+	// ErrInvalidEvent is returned when event validation fails.
+	ErrInvalidEvent = errors.New("invalid event")
 )
 
 // Event represents a calendar event.

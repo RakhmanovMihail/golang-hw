@@ -219,16 +219,376 @@ func TestApp_CreateEvent(t *testing.T) {
 			appInst := app.New(*loggerInst, storage)
 
 			ctx := tt.ctxSetup()
-			err := appInst.CreateEvent(ctx, tt.id, tt.title, tt.startTime, tt.endTime, tt.userID)
+			event, err := appInst.CreateEvent(ctx, tt.id, tt.title, tt.startTime, tt.endTime, tt.userID)
+
+			if tt.wantErrContains != "" {
+				require.Error(t, err)
+				require.ErrorContains(t, err, tt.wantErrContains)
+				assert.Nil(t, event)
+			} else {
+				require.NoError(t, err)
+				require.NotNil(t, event)
+				assert.Equal(t, tt.title, event.Title)
+			}
+
+			assert.Len(t, storage.events, tt.wantEventsLen)
+		})
+	}
+}
+
+func TestApp_GetEvents(t *testing.T) {
+	tests := []struct {
+		name            string
+		setupStorage    func(*testStorage)
+		ctxSetup        func() context.Context
+		wantErrContains string
+		wantLen         int
+	}{
+		{
+			name: "успешное получение всех событий",
+			setupStorage: func(ts *testStorage) {
+				ts.events = map[uint64]*storage.Event{
+					1: {ID: 1, Title: "Событие 1"},
+					2: {ID: 2, Title: "Событие 2"},
+				}
+			},
+			ctxSetup:        context.Background,
+			wantErrContains: "",
+			wantLen:         2,
+		},
+		{
+			name:            "пустой список событий",
+			setupStorage:    func(ts *testStorage) { ts.events = make(map[uint64]*storage.Event) },
+			ctxSetup:        context.Background,
+			wantErrContains: "",
+			wantLen:         0,
+		},
+		{
+			name: "контекст с таймаутом",
+			setupStorage: func(ts *testStorage) {
+				ts.events = map[uint64]*storage.Event{
+					1: {ID: 1, Title: "Событие 1"},
+				}
+			},
+			ctxSetup: func() context.Context {
+				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Millisecond)
+				t.Cleanup(cancel)
+				return ctx
+			},
+			wantErrContains: "context deadline exceeded",
+			wantLen:         0,
+		},
+		{
+			name:            "ошибка storage",
+			setupStorage:    func(ts *testStorage) { ts.err = errors.New("storage error") },
+			ctxSetup:        context.Background,
+			wantErrContains: "storage error",
+			wantLen:         0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			storage := &testStorage{}
+			if tt.setupStorage != nil {
+				tt.setupStorage(storage)
+			}
+
+			loggerInst := loggerpkg.New(loggerpkg.LevelInfo)
+			appInst := app.New(*loggerInst, storage)
+
+			ctx := tt.ctxSetup()
+			events, err := appInst.GetEvents(ctx)
+
+			if tt.wantErrContains != "" {
+				require.Error(t, err)
+				require.ErrorContains(t, err, tt.wantErrContains)
+				assert.Nil(t, events)
+			} else {
+				require.NoError(t, err)
+				assert.Len(t, events, tt.wantLen)
+			}
+		})
+	}
+}
+
+func TestApp_GetEvent(t *testing.T) {
+	tests := []struct {
+		name            string
+		setupStorage    func(*testStorage)
+		ctxSetup        func() context.Context
+		id              uint64
+		wantErrContains string
+		wantEventID     uint64
+	}{
+		{
+			name: "успешное получение события",
+			setupStorage: func(ts *testStorage) {
+				ts.events = map[uint64]*storage.Event{
+					1: {ID: 1, Title: "Событие 1"},
+				}
+			},
+			ctxSetup:        context.Background,
+			id:              1,
+			wantErrContains: "",
+			wantEventID:     1,
+		},
+		{
+			name:            "событие не найдено",
+			setupStorage:    func(ts *testStorage) { ts.events = make(map[uint64]*storage.Event) },
+			ctxSetup:        context.Background,
+			id:              999,
+			wantErrContains: "event not found",
+			wantEventID:     0,
+		},
+		{
+			name: "контекст с таймаутом",
+			setupStorage: func(ts *testStorage) {
+				ts.events = map[uint64]*storage.Event{
+					1: {ID: 1, Title: "Событие 1"},
+				}
+			},
+			ctxSetup: func() context.Context {
+				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Millisecond)
+				t.Cleanup(cancel)
+				return ctx
+			},
+			id:              1,
+			wantErrContains: "context deadline exceeded",
+			wantEventID:     0,
+		},
+		{
+			name:            "ошибка storage",
+			setupStorage:    func(ts *testStorage) { ts.err = errors.New("storage error") },
+			ctxSetup:        context.Background,
+			id:              1,
+			wantErrContains: "storage error",
+			wantEventID:     0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			storage := &testStorage{}
+			if tt.setupStorage != nil {
+				tt.setupStorage(storage)
+			}
+
+			loggerInst := loggerpkg.New(loggerpkg.LevelInfo)
+			appInst := app.New(*loggerInst, storage)
+
+			ctx := tt.ctxSetup()
+			event, err := appInst.GetEvent(ctx, tt.id)
+
+			if tt.wantErrContains != "" {
+				require.Error(t, err)
+				require.ErrorContains(t, err, tt.wantErrContains)
+				assert.Nil(t, event)
+			} else {
+				require.NoError(t, err)
+				require.NotNil(t, event)
+				assert.Equal(t, tt.wantEventID, event.ID)
+			}
+		})
+	}
+}
+
+func TestApp_UpdateEvent(t *testing.T) {
+	tests := []struct {
+		name            string
+		setupStorage    func(*testStorage)
+		ctxSetup        func() context.Context
+		id              uint64
+		title           *string
+		startTime       *time.Time
+		endTime         *time.Time
+		userID          *int
+		wantErrContains string
+	}{
+		{
+			name: "успешное обновление события",
+			setupStorage: func(ts *testStorage) {
+				ts.events = map[uint64]*storage.Event{
+					1: {ID: 1, Title: "Старое название", StartTime: time.Date(2026, 3, 27, 10, 0, 0, 0, time.UTC), EndTime: time.Date(2026, 3, 27, 11, 0, 0, 0, time.UTC)},
+				}
+			},
+			ctxSetup:        context.Background,
+			id:              1,
+			title:           ptrToString("Новое название"),
+			startTime:       nil,
+			endTime:         nil,
+			userID:          nil,
+			wantErrContains: "",
+		},
+		{
+			name: "обновление с валидацией времени",
+			setupStorage: func(ts *testStorage) {
+				ts.events = map[uint64]*storage.Event{
+					1: {ID: 1, Title: "Событие", StartTime: time.Date(2026, 3, 27, 10, 0, 0, 0, time.UTC), EndTime: time.Date(2026, 3, 27, 11, 0, 0, 0, time.UTC)},
+				}
+			},
+			ctxSetup:        context.Background,
+			id:              1,
+			title:           nil,
+			startTime:       ptrToTime(time.Date(2026, 3, 27, 12, 0, 0, 0, time.UTC)),
+			endTime:         ptrToTime(time.Date(2026, 3, 27, 11, 0, 0, 0, time.UTC)),
+			userID:          nil,
+			wantErrContains: "invalid event",
+		},
+		{
+			name: "обновление с пустым заголовком",
+			setupStorage: func(ts *testStorage) {
+				ts.events = map[uint64]*storage.Event{
+					1: {ID: 1, Title: "Событие", StartTime: time.Date(2026, 3, 27, 10, 0, 0, 0, time.UTC), EndTime: time.Date(2026, 3, 27, 11, 0, 0, 0, time.UTC)},
+				}
+			},
+			ctxSetup:        context.Background,
+			id:              1,
+			title:           ptrToString(""),
+			startTime:       nil,
+			endTime:         nil,
+			userID:          nil,
+			wantErrContains: "invalid event",
+		},
+		{
+			name:            "событие не найдено",
+			setupStorage:    func(ts *testStorage) { ts.events = make(map[uint64]*storage.Event) },
+			ctxSetup:        context.Background,
+			id:              999,
+			title:           ptrToString("Новое название"),
+			startTime:       nil,
+			endTime:         nil,
+			userID:          nil,
+			wantErrContains: "event not found",
+		},
+		{
+			name: "контекст с таймаутом",
+			setupStorage: func(ts *testStorage) {
+				ts.events = map[uint64]*storage.Event{
+					1: {ID: 1, Title: "Событие"},
+				}
+			},
+			ctxSetup: func() context.Context {
+				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Millisecond)
+				t.Cleanup(cancel)
+				return ctx
+			},
+			id:              1,
+			title:           ptrToString("Новое название"),
+			startTime:       nil,
+			endTime:         nil,
+			userID:          nil,
+			wantErrContains: "context deadline exceeded",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			storage := &testStorage{}
+			if tt.setupStorage != nil {
+				tt.setupStorage(storage)
+			}
+
+			loggerInst := loggerpkg.New(loggerpkg.LevelInfo)
+			appInst := app.New(*loggerInst, storage)
+
+			ctx := tt.ctxSetup()
+			event, err := appInst.UpdateEvent(ctx, tt.id, tt.title, tt.startTime, tt.endTime, tt.userID)
+
+			if tt.wantErrContains != "" {
+				require.Error(t, err)
+				require.ErrorContains(t, err, tt.wantErrContains)
+				assert.Nil(t, event)
+			} else {
+				require.NoError(t, err)
+				require.NotNil(t, event)
+				if tt.title != nil {
+					assert.Equal(t, *tt.title, event.Title)
+				}
+			}
+		})
+	}
+}
+
+func TestApp_DeleteEvent(t *testing.T) {
+	tests := []struct {
+		name            string
+		setupStorage    func(*testStorage)
+		ctxSetup        func() context.Context
+		id              uint64
+		wantErrContains string
+	}{
+		{
+			name: "успешное удаление события",
+			setupStorage: func(ts *testStorage) {
+				ts.events = map[uint64]*storage.Event{
+					1: {ID: 1, Title: "Событие"},
+				}
+			},
+			ctxSetup:        context.Background,
+			id:              1,
+			wantErrContains: "",
+		},
+		{
+			name:            "событие не найдено",
+			setupStorage:    func(ts *testStorage) { ts.events = make(map[uint64]*storage.Event) },
+			ctxSetup:        context.Background,
+			id:              999,
+			wantErrContains: "event not found",
+		},
+		{
+			name: "контекст с таймаутом",
+			setupStorage: func(ts *testStorage) {
+				ts.events = map[uint64]*storage.Event{
+					1: {ID: 1, Title: "Событие"},
+				}
+			},
+			ctxSetup: func() context.Context {
+				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Millisecond)
+				t.Cleanup(cancel)
+				return ctx
+			},
+			id:              1,
+			wantErrContains: "context deadline exceeded",
+		},
+		{
+			name:            "ошибка storage",
+			setupStorage:    func(ts *testStorage) { ts.err = errors.New("storage error") },
+			ctxSetup:        context.Background,
+			id:              1,
+			wantErrContains: "storage error",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			storage := &testStorage{}
+			if tt.setupStorage != nil {
+				tt.setupStorage(storage)
+			}
+
+			loggerInst := loggerpkg.New(loggerpkg.LevelInfo)
+			appInst := app.New(*loggerInst, storage)
+
+			ctx := tt.ctxSetup()
+			err := appInst.DeleteEvent(ctx, tt.id)
 
 			if tt.wantErrContains != "" {
 				require.Error(t, err)
 				require.ErrorContains(t, err, tt.wantErrContains)
 			} else {
 				require.NoError(t, err)
+				assert.Len(t, storage.events, 0)
 			}
-
-			assert.Len(t, storage.events, tt.wantEventsLen)
 		})
 	}
+}
+
+// Helper functions
+func ptrToString(s string) *string {
+	return &s
+}
+
+func ptrToTime(t time.Time) *time.Time {
+	return &t
 }
