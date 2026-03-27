@@ -172,6 +172,63 @@ func TestCreateEvent_DateBusy(t *testing.T) {
 	assert.Equal(t, http.StatusConflict, w.Code)
 }
 
+func TestGetEvent_Success(t *testing.T) {
+	router, app := setupTestRouter(t)
+
+	ctx := context.Background()
+	now := time.Now().UTC()
+	created, err := app.Storage.Create(ctx, &storage.Event{
+		Title:     "Test Event",
+		StartTime: now.Add(time.Hour),
+		EndTime:   now.Add(2 * time.Hour),
+		UserID:    1,
+	})
+	require.NoError(t, err)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/events/"+strconv.Itoa(int(created.ID)), nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var event internalhttp.Event
+	err = json.Unmarshal(w.Body.Bytes(), &event)
+	require.NoError(t, err)
+	assert.Equal(t, "Test Event", *event.Title)
+	assert.Equal(t, int64(created.ID), *event.Id)
+}
+
+func TestUpdateEvent_NotFound(t *testing.T) {
+	router, _ := setupTestRouter(t)
+
+	now := time.Now().UTC()
+	update := internalhttp.UpdateEventRequest{
+		Title:     ptr("Updated"),
+		StartTime: ptr(now.Add(time.Hour)),
+		EndTime:   ptr(now.Add(2 * time.Hour)),
+	}
+
+	body, _ := json.Marshal(update)
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/events/999", bytes.NewReader(body))
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestDeleteEvent_NotFound(t *testing.T) {
+	router, _ := setupTestRouter(t)
+
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/events/999", nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
+}
+
 func ptr[T any](v T) *T {
 	return &v
 }
