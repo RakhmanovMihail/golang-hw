@@ -4,7 +4,7 @@ level = "info"
 [api]
 level = "debug"
 host = "localhost"
-port = "5432"
+port = "8888"
 
 [storage]
 mode = "sql"
