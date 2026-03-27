@@ -4,18 +4,11 @@
 package internalhttp
 
 import (
-	"bytes"
-	"compress/gzip"
-	"encoding/base64"
 	"fmt"
 	"net/http"
-	"net/url"
-	"path"
-	"strings"
 	"time"
 
-	"github.com/getkin/kin-openapi/openapi3"
-	"github.com/labstack/echo/v4"
+	"github.com/go-chi/chi/v5"
 	"github.com/oapi-codegen/runtime"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
@@ -68,284 +61,414 @@ type UpdateEventJSONRequestBody = UpdateEventRequest
 type ServerInterface interface {
 	// Получить все события
 	// (GET /api/v1/events)
-	GetEvents(ctx echo.Context) error
+	GetEvents(w http.ResponseWriter, r *http.Request)
 	// Создать новое событие
 	// (POST /api/v1/events)
-	CreateEvent(ctx echo.Context) error
+	CreateEvent(w http.ResponseWriter, r *http.Request)
 	// Получить события на день
 	// (GET /api/v1/events/day/{date})
-	GetEventsByDay(ctx echo.Context, date openapi_types.Date) error
+	GetEventsByDay(w http.ResponseWriter, r *http.Request, date openapi_types.Date)
 	// Получить события на месяц
 	// (GET /api/v1/events/month/{date})
-	GetEventsByMonth(ctx echo.Context, date openapi_types.Date) error
+	GetEventsByMonth(w http.ResponseWriter, r *http.Request, date openapi_types.Date)
 	// Получить события на неделю
 	// (GET /api/v1/events/week/{date})
-	GetEventsByWeek(ctx echo.Context, date openapi_types.Date) error
+	GetEventsByWeek(w http.ResponseWriter, r *http.Request, date openapi_types.Date)
 	// Удалить событие
 	// (DELETE /api/v1/events/{id})
-	DeleteEvent(ctx echo.Context, id int64) error
+	DeleteEvent(w http.ResponseWriter, r *http.Request, id int64)
 	// Получить событие по ID
 	// (GET /api/v1/events/{id})
-	GetEvent(ctx echo.Context, id int64) error
+	GetEvent(w http.ResponseWriter, r *http.Request, id int64)
 	// Обновить событие
 	// (PUT /api/v1/events/{id})
-	UpdateEvent(ctx echo.Context, id int64) error
+	UpdateEvent(w http.ResponseWriter, r *http.Request, id int64)
 }
 
-// ServerInterfaceWrapper converts echo contexts to parameters.
+// Unimplemented server implementation that returns http.StatusNotImplemented for each endpoint.
+
+type Unimplemented struct{}
+
+// Получить все события
+// (GET /api/v1/events)
+func (_ Unimplemented) GetEvents(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Создать новое событие
+// (POST /api/v1/events)
+func (_ Unimplemented) CreateEvent(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Получить события на день
+// (GET /api/v1/events/day/{date})
+func (_ Unimplemented) GetEventsByDay(w http.ResponseWriter, r *http.Request, date openapi_types.Date) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Получить события на месяц
+// (GET /api/v1/events/month/{date})
+func (_ Unimplemented) GetEventsByMonth(w http.ResponseWriter, r *http.Request, date openapi_types.Date) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Получить события на неделю
+// (GET /api/v1/events/week/{date})
+func (_ Unimplemented) GetEventsByWeek(w http.ResponseWriter, r *http.Request, date openapi_types.Date) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Удалить событие
+// (DELETE /api/v1/events/{id})
+func (_ Unimplemented) DeleteEvent(w http.ResponseWriter, r *http.Request, id int64) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Получить событие по ID
+// (GET /api/v1/events/{id})
+func (_ Unimplemented) GetEvent(w http.ResponseWriter, r *http.Request, id int64) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Обновить событие
+// (PUT /api/v1/events/{id})
+func (_ Unimplemented) UpdateEvent(w http.ResponseWriter, r *http.Request, id int64) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// ServerInterfaceWrapper converts contexts to parameters.
 type ServerInterfaceWrapper struct {
-	Handler ServerInterface
+	Handler            ServerInterface
+	HandlerMiddlewares []MiddlewareFunc
+	ErrorHandlerFunc   func(w http.ResponseWriter, r *http.Request, err error)
 }
 
-// GetEvents converts echo context to params.
-func (w *ServerInterfaceWrapper) GetEvents(ctx echo.Context) error {
-	var err error
+type MiddlewareFunc func(http.Handler) http.Handler
 
-	// Invoke the callback with all the unmarshaled arguments
-	err = w.Handler.GetEvents(ctx)
-	return err
+// GetEvents operation middleware
+func (siw *ServerInterfaceWrapper) GetEvents(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetEvents(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
 }
 
-// CreateEvent converts echo context to params.
-func (w *ServerInterfaceWrapper) CreateEvent(ctx echo.Context) error {
-	var err error
+// CreateEvent operation middleware
+func (siw *ServerInterfaceWrapper) CreateEvent(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 
-	// Invoke the callback with all the unmarshaled arguments
-	err = w.Handler.CreateEvent(ctx)
-	return err
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateEvent(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
 }
 
-// GetEventsByDay converts echo context to params.
-func (w *ServerInterfaceWrapper) GetEventsByDay(ctx echo.Context) error {
+// GetEventsByDay operation middleware
+func (siw *ServerInterfaceWrapper) GetEventsByDay(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
 	var err error
+
 	// ------------- Path parameter "date" -------------
 	var date openapi_types.Date
 
-	err = runtime.BindStyledParameterWithLocation("simple", false, "date", runtime.ParamLocationPath, ctx.Param("date"), &date)
+	err = runtime.BindStyledParameterWithLocation("simple", false, "date", runtime.ParamLocationPath, chi.URLParam(r, "date"), &date)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter date: %s", err))
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "date", Err: err})
+		return
 	}
 
-	// Invoke the callback with all the unmarshaled arguments
-	err = w.Handler.GetEventsByDay(ctx, date)
-	return err
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetEventsByDay(w, r, date)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
 }
 
-// GetEventsByMonth converts echo context to params.
-func (w *ServerInterfaceWrapper) GetEventsByMonth(ctx echo.Context) error {
+// GetEventsByMonth operation middleware
+func (siw *ServerInterfaceWrapper) GetEventsByMonth(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
 	var err error
+
 	// ------------- Path parameter "date" -------------
 	var date openapi_types.Date
 
-	err = runtime.BindStyledParameterWithLocation("simple", false, "date", runtime.ParamLocationPath, ctx.Param("date"), &date)
+	err = runtime.BindStyledParameterWithLocation("simple", false, "date", runtime.ParamLocationPath, chi.URLParam(r, "date"), &date)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter date: %s", err))
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "date", Err: err})
+		return
 	}
 
-	// Invoke the callback with all the unmarshaled arguments
-	err = w.Handler.GetEventsByMonth(ctx, date)
-	return err
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetEventsByMonth(w, r, date)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
 }
 
-// GetEventsByWeek converts echo context to params.
-func (w *ServerInterfaceWrapper) GetEventsByWeek(ctx echo.Context) error {
+// GetEventsByWeek operation middleware
+func (siw *ServerInterfaceWrapper) GetEventsByWeek(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
 	var err error
+
 	// ------------- Path parameter "date" -------------
 	var date openapi_types.Date
 
-	err = runtime.BindStyledParameterWithLocation("simple", false, "date", runtime.ParamLocationPath, ctx.Param("date"), &date)
+	err = runtime.BindStyledParameterWithLocation("simple", false, "date", runtime.ParamLocationPath, chi.URLParam(r, "date"), &date)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter date: %s", err))
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "date", Err: err})
+		return
 	}
 
-	// Invoke the callback with all the unmarshaled arguments
-	err = w.Handler.GetEventsByWeek(ctx, date)
-	return err
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetEventsByWeek(w, r, date)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
 }
 
-// DeleteEvent converts echo context to params.
-func (w *ServerInterfaceWrapper) DeleteEvent(ctx echo.Context) error {
+// DeleteEvent operation middleware
+func (siw *ServerInterfaceWrapper) DeleteEvent(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
 	var err error
+
 	// ------------- Path parameter "id" -------------
 	var id int64
 
-	err = runtime.BindStyledParameterWithLocation("simple", false, "id", runtime.ParamLocationPath, ctx.Param("id"), &id)
+	err = runtime.BindStyledParameterWithLocation("simple", false, "id", runtime.ParamLocationPath, chi.URLParam(r, "id"), &id)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter id: %s", err))
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
 	}
 
-	// Invoke the callback with all the unmarshaled arguments
-	err = w.Handler.DeleteEvent(ctx, id)
-	return err
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteEvent(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
 }
 
-// GetEvent converts echo context to params.
-func (w *ServerInterfaceWrapper) GetEvent(ctx echo.Context) error {
+// GetEvent operation middleware
+func (siw *ServerInterfaceWrapper) GetEvent(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
 	var err error
+
 	// ------------- Path parameter "id" -------------
 	var id int64
 
-	err = runtime.BindStyledParameterWithLocation("simple", false, "id", runtime.ParamLocationPath, ctx.Param("id"), &id)
+	err = runtime.BindStyledParameterWithLocation("simple", false, "id", runtime.ParamLocationPath, chi.URLParam(r, "id"), &id)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter id: %s", err))
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
 	}
 
-	// Invoke the callback with all the unmarshaled arguments
-	err = w.Handler.GetEvent(ctx, id)
-	return err
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetEvent(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
 }
 
-// UpdateEvent converts echo context to params.
-func (w *ServerInterfaceWrapper) UpdateEvent(ctx echo.Context) error {
+// UpdateEvent operation middleware
+func (siw *ServerInterfaceWrapper) UpdateEvent(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
 	var err error
+
 	// ------------- Path parameter "id" -------------
 	var id int64
 
-	err = runtime.BindStyledParameterWithLocation("simple", false, "id", runtime.ParamLocationPath, ctx.Param("id"), &id)
+	err = runtime.BindStyledParameterWithLocation("simple", false, "id", runtime.ParamLocationPath, chi.URLParam(r, "id"), &id)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter id: %s", err))
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
 	}
 
-	// Invoke the callback with all the unmarshaled arguments
-	err = w.Handler.UpdateEvent(ctx, id)
-	return err
-}
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateEvent(w, r, id)
+	}))
 
-// This is a simple interface which specifies echo.Route addition functions which
-// are present on both echo.Echo and echo.Group, since we want to allow using
-// either of them for path registration
-type EchoRouter interface {
-	CONNECT(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route
-	DELETE(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route
-	GET(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route
-	HEAD(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route
-	OPTIONS(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route
-	PATCH(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route
-	POST(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route
-	PUT(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route
-	TRACE(path string, h echo.HandlerFunc, m ...echo.MiddlewareFunc) *echo.Route
-}
-
-// RegisterHandlers adds each server route to the EchoRouter.
-func RegisterHandlers(router EchoRouter, si ServerInterface) {
-	RegisterHandlersWithBaseURL(router, si, "")
-}
-
-// Registers handlers, and prepends BaseURL to the paths, so that the paths
-// can be served under a prefix.
-func RegisterHandlersWithBaseURL(router EchoRouter, si ServerInterface, baseURL string) {
-
-	wrapper := ServerInterfaceWrapper{
-		Handler: si,
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
 	}
 
-	router.GET(baseURL+"/api/v1/events", wrapper.GetEvents)
-	router.POST(baseURL+"/api/v1/events", wrapper.CreateEvent)
-	router.GET(baseURL+"/api/v1/events/day/:date", wrapper.GetEventsByDay)
-	router.GET(baseURL+"/api/v1/events/month/:date", wrapper.GetEventsByMonth)
-	router.GET(baseURL+"/api/v1/events/week/:date", wrapper.GetEventsByWeek)
-	router.DELETE(baseURL+"/api/v1/events/:id", wrapper.DeleteEvent)
-	router.GET(baseURL+"/api/v1/events/:id", wrapper.GetEvent)
-	router.PUT(baseURL+"/api/v1/events/:id", wrapper.UpdateEvent)
-
+	handler.ServeHTTP(w, r.WithContext(ctx))
 }
 
-// Base64 encoded, gzipped, json marshaled Swagger object
-var swaggerSpec = []string{
-
-	"H4sIAAAAAAAC/+xZbWsbRxD+K8e2H8/WyXZS9741cWgDDYSQUtxiwkY3ti/RvWRv5VYYgSWXJpBQQyj0",
-	"U1NC/sBFRI0dWcpfmP1HZfYk+SSd7FPqCqvoi15OO+N5eZ6Z2fE+KwVeGPjgy4jZ+ywq7YLH9cebAriE",
-	"W3vgy3vwpAKRpKfwM/fCMtBHB6KScEPpBj6zGb7Ct6quDvFvfIct7OAxtgxVx4/qAI+xoxoYM5OB7zyQ",
-	"rgfMZivWyvUla3Vp5Yv7xaJtWbZl/cBM5gfS3a4+eAjbgQBmF6+ZLJJcyCwx60xMupKsYvhS1VVDHWBL",
-	"PcXYUHUDP2AXTzHGDr7DLp4wk1UiEA9ch9nFldW1azWThSIIQUgXojHHUi7n9NGvlMv8IQlIUQGTyWpI",
-	"wpEUrr/DaukgpJVPiMd2IDwumc0cLmFJi2WoHIlaSi8FcKDD9eXqymQTXV/CDghSmI75JCutaa3sJWko",
-	"pHnyNaZokMC0o5TLYV+vr7Fx32omE/Ck4gpwmP1jz6Yhh1MZOvtTWwNNwcNHUJJkxi0hAnEPojDwIxhh",
-	"B9Bv5OBr7OJb9Vw1NFqwk7zEeNLDUJeNAbAnOxSni9WMxamWZTLxeSZE1vy6inyeip/5gJ1A8ULoZfB0",
-	"JPZ/aB+1i231gt4NPNVhP1QNgxymnwdIUEcGdlVD5ybGJrbVkWqoF4Y6xCa2dHxOsd3PIruESjAl0c9j",
-	"bh6mjuH3u9BZdKVFV/o/dqURrNMj198OxkH9zf37d42v7t6metBWR5TrljrAJh6rOsZkatwj/TuM1YE6",
-	"SiHxJi+D73BB8sxkeyCiRGlx2Vq2yIsgBJ+HLrPZ6rK1vMpMFnK5qyFY4KFb2CsWYK8/L+6A5h/hlJN1",
-	"tx1ms69B3kpOUKtNuqM+vWJZ9FYKfNnrQjwMy25JixYeRQmykxmUPrkSPC34uYBtZrPPCmfTaqE3qhaS",
-	"jnYWPy4ErybhG6kFb4gU2FLPsKOe40lSOpvYUg0SvzalcefaNDQYZNnyMinpBDHsYEcdJaX8GR7jW0rg",
-	"WVLpNdYAiSqex0WVxP/SDeJQPcVjXfCxSedHegOlne9ENOX0MrZFVSWIMnKWmvZZMiBBJG8ETvXSYpJx",
-	"n6gND2PE+toYZIqXl5UEKRnZGB6udBTfE3n649naTLHxJ7ao3KgDjY4PqtHH63uMdVXvqnpi1ZcztOp3",
-	"jKmVJFYQYKmvzBtvXvczm7Cmg11sYneEOXpSGmNOzRypfwWHVwv71FpqF5fCG9UNXtW1VHAPJAhSvj8x",
-	"xk1D/UIIoJajGtgyNjc3N5fu3Fna2KB5JaPx0cRNOqhYUy/lei4h69gox8xUNoZaZMYVYmueSvjVoGk6",
-	"c0YPa8/nvsOMXjs6BFM9b6oX+ejiBb7cnYIwd+h8fsp0MKZhDdv05RRbqq6O1K8LMi3INCdkGmA2H51+",
-	"Ang8BZu+B3j8iWTq6FVCC9t4vCDTgkxzQaYBZtVv+ei07zq15KpdBgnjVNrQz/sXpBEaZeDbdfKhe+JC",
-	"4N/ie3h75EEU8R04d6msDvWdp51/n3zxVWpYpWbC2gyhlmv5Plfof9ML6Dj2s68t5vmdYT6w/Gm3+otK",
-	"8gKI/1UZJu8+Yte4vTFhB1XJgGRqtT9DVF7+oivjXxS5Fl3WzBdd9KW3Axmq0Fdz2XXl6LrYv01dNF4N",
-	"AJe3f2kFIPaybyzfBiVeNhzYg3IQeuBLIznLTFYRZWazXSlDu1Ao07ndIJL2+vr6Oqtt1f4JAAD//wyc",
-	"tUP6IgAA",
+type UnescapedCookieParamError struct {
+	ParamName string
+	Err       error
 }
 
-// GetSwagger returns the content of the embedded swagger specification file
-// or error if failed to decode
-func decodeSpec() ([]byte, error) {
-	zipped, err := base64.StdEncoding.DecodeString(strings.Join(swaggerSpec, ""))
-	if err != nil {
-		return nil, fmt.Errorf("error base64 decoding spec: %w", err)
-	}
-	zr, err := gzip.NewReader(bytes.NewReader(zipped))
-	if err != nil {
-		return nil, fmt.Errorf("error decompressing spec: %w", err)
-	}
-	var buf bytes.Buffer
-	_, err = buf.ReadFrom(zr)
-	if err != nil {
-		return nil, fmt.Errorf("error decompressing spec: %w", err)
-	}
-
-	return buf.Bytes(), nil
+func (e *UnescapedCookieParamError) Error() string {
+	return fmt.Sprintf("error unescaping cookie parameter '%s'", e.ParamName)
 }
 
-var rawSpec = decodeSpecCached()
-
-// a naive cached of a decoded swagger spec
-func decodeSpecCached() func() ([]byte, error) {
-	data, err := decodeSpec()
-	return func() ([]byte, error) {
-		return data, err
-	}
+func (e *UnescapedCookieParamError) Unwrap() error {
+	return e.Err
 }
 
-// Constructs a synthetic filesystem for resolving external references when loading openapi specifications.
-func PathToRawSpec(pathToFile string) map[string]func() ([]byte, error) {
-	res := make(map[string]func() ([]byte, error))
-	if len(pathToFile) > 0 {
-		res[pathToFile] = rawSpec
-	}
-
-	return res
+type UnmarshalingParamError struct {
+	ParamName string
+	Err       error
 }
 
-// GetSwagger returns the Swagger specification corresponding to the generated code
-// in this file. The external references of Swagger specification are resolved.
-// The logic of resolving external references is tightly connected to "import-mapping" feature.
-// Externally referenced files must be embedded in the corresponding golang packages.
-// Urls can be supported but this task was out of the scope.
-func GetSwagger() (swagger *openapi3.T, err error) {
-	resolvePath := PathToRawSpec("")
+func (e *UnmarshalingParamError) Error() string {
+	return fmt.Sprintf("Error unmarshaling parameter %s as JSON: %s", e.ParamName, e.Err.Error())
+}
 
-	loader := openapi3.NewLoader()
-	loader.IsExternalRefsAllowed = true
-	loader.ReadFromURIFunc = func(loader *openapi3.Loader, url *url.URL) ([]byte, error) {
-		pathToFile := url.String()
-		pathToFile = path.Clean(pathToFile)
-		getSpec, ok := resolvePath[pathToFile]
-		if !ok {
-			err1 := fmt.Errorf("path not found: %s", pathToFile)
-			return nil, err1
+func (e *UnmarshalingParamError) Unwrap() error {
+	return e.Err
+}
+
+type RequiredParamError struct {
+	ParamName string
+}
+
+func (e *RequiredParamError) Error() string {
+	return fmt.Sprintf("Query argument %s is required, but not found", e.ParamName)
+}
+
+type RequiredHeaderError struct {
+	ParamName string
+	Err       error
+}
+
+func (e *RequiredHeaderError) Error() string {
+	return fmt.Sprintf("Header parameter %s is required, but not found", e.ParamName)
+}
+
+func (e *RequiredHeaderError) Unwrap() error {
+	return e.Err
+}
+
+type InvalidParamFormatError struct {
+	ParamName string
+	Err       error
+}
+
+func (e *InvalidParamFormatError) Error() string {
+	return fmt.Sprintf("Invalid format for parameter %s: %s", e.ParamName, e.Err.Error())
+}
+
+func (e *InvalidParamFormatError) Unwrap() error {
+	return e.Err
+}
+
+type TooManyValuesForParamError struct {
+	ParamName string
+	Count     int
+}
+
+func (e *TooManyValuesForParamError) Error() string {
+	return fmt.Sprintf("Expected one value for %s, got %d", e.ParamName, e.Count)
+}
+
+// Handler creates http.Handler with routing matching OpenAPI spec.
+func Handler(si ServerInterface) http.Handler {
+	return HandlerWithOptions(si, ChiServerOptions{})
+}
+
+type ChiServerOptions struct {
+	BaseURL          string
+	BaseRouter       chi.Router
+	Middlewares      []MiddlewareFunc
+	ErrorHandlerFunc func(w http.ResponseWriter, r *http.Request, err error)
+}
+
+// HandlerFromMux creates http.Handler with routing matching OpenAPI spec based on the provided mux.
+func HandlerFromMux(si ServerInterface, r chi.Router) http.Handler {
+	return HandlerWithOptions(si, ChiServerOptions{
+		BaseRouter: r,
+	})
+}
+
+func HandlerFromMuxWithBaseURL(si ServerInterface, r chi.Router, baseURL string) http.Handler {
+	return HandlerWithOptions(si, ChiServerOptions{
+		BaseURL:    baseURL,
+		BaseRouter: r,
+	})
+}
+
+// HandlerWithOptions creates http.Handler with additional options
+func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handler {
+	r := options.BaseRouter
+
+	if r == nil {
+		r = chi.NewRouter()
+	}
+	if options.ErrorHandlerFunc == nil {
+		options.ErrorHandlerFunc = func(w http.ResponseWriter, r *http.Request, err error) {
+			http.Error(w, err.Error(), http.StatusBadRequest)
 		}
-		return getSpec()
 	}
-	var specData []byte
-	specData, err = rawSpec()
-	if err != nil {
-		return
+	wrapper := ServerInterfaceWrapper{
+		Handler:            si,
+		HandlerMiddlewares: options.Middlewares,
+		ErrorHandlerFunc:   options.ErrorHandlerFunc,
 	}
-	swagger, err = loader.LoadFromData(specData)
-	if err != nil {
-		return
-	}
-	return
+
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/api/v1/events", wrapper.GetEvents)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/api/v1/events", wrapper.CreateEvent)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/api/v1/events/day/{date}", wrapper.GetEventsByDay)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/api/v1/events/month/{date}", wrapper.GetEventsByMonth)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/api/v1/events/week/{date}", wrapper.GetEventsByWeek)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/api/v1/events/{id}", wrapper.DeleteEvent)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/api/v1/events/{id}", wrapper.GetEvent)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/api/v1/events/{id}", wrapper.UpdateEvent)
+	})
+
+	return r
 }
