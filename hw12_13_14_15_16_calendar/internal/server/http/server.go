@@ -12,6 +12,8 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 )
 
+const shutdownTimeout = 5 * time.Second
+
 // HTTPServer represents an HTTP server.
 type HTTPServer struct {
 	server *http.Server
@@ -93,7 +95,7 @@ func (s *HTTPServer) Start(ctx context.Context) error {
 
 // Stop stops the HTTP server gracefully.
 func (s *HTTPServer) Stop(ctx context.Context) error {
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, shutdownTimeout)
 	defer cancel()
 
 	if err := s.server.Shutdown(ctx); err != nil {
@@ -103,13 +105,6 @@ func (s *HTTPServer) Stop(ctx context.Context) error {
 
 	s.logger.Info("server stopped")
 	return nil
-}
-
-func queryString(r *http.Request) string {
-	if r.URL.RawQuery != "" {
-		return "?" + r.URL.RawQuery
-	}
-	return ""
 }
 
 func helloHandler(logger logger.ILogger) http.HandlerFunc {

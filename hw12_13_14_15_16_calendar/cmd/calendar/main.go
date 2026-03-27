@@ -76,7 +76,7 @@ func run() error {
 
 	go func() {
 		<-ctx.Done()
-		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 3*time.Second)
+		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer shutdownCancel()
 		if err := server.Stop(shutdownCtx); err != nil {
 			logg.Error(fmt.Sprintf("server stop: %v", err))

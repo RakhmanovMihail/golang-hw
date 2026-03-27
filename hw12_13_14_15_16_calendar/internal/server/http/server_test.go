@@ -70,22 +70,3 @@ func TestHelloHandler(t *testing.T) {
 	assert.Equal(t, "hello-world", string(body))
 	assert.Contains(t, mockLog.messages, "hello endpoint called")
 }
-
-func TestQueryString(t *testing.T) {
-	tests := []struct {
-		path     string
-		expected string
-	}{
-		{"/events?user=123", "?user=123"},
-		{"/events", ""},
-		{"/events?", ""},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.path, func(t *testing.T) {
-			req := httptest.NewRequestWithContext(t.Context(), "GET", tt.path, nil)
-			result := queryString(req)
-			assert.Equal(t, tt.expected, result)
-		})
-	}
-}
