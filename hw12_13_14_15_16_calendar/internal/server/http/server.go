@@ -2,6 +2,7 @@ package internalhttp
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -83,7 +84,7 @@ func (s *HTTPServer) Start(ctx context.Context) error {
 
 	select {
 	case err := <-errCh:
-		if err != http.ErrServerClosed {
+		if !errors.Is(err, http.ErrServerClosed) {
 			s.logger.Error("server failed: " + err.Error())
 			return err
 		}

@@ -65,6 +65,11 @@ linters.settings:
           - github.com/stretchr/testify
           - github.com/gorilla/mux
           - github.com/google/uuid
+          - github.com/go-chi/chi/v5
+          - github.com/go-chi/chi/v5/middleware
+          - github.com/oapi-codegen/runtime
+          - github.com/oapi-codegen/runtime/types
+          - github.com/getkin/kin-openapi
         deny:
           - pkg: io/ioutil
             desc: "Use os or io packages instead"

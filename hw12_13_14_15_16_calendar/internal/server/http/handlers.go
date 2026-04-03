@@ -49,7 +49,10 @@ func (s *APIServer) CreateEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	created, err := s.app.CreateEvent(ctx, req.Title, req.StartTime, req.EndTime, req.UserId, req.Description, req.NotifyBefore)
+	created, err := s.app.CreateEvent(
+		ctx, req.Title, req.StartTime, req.EndTime,
+		req.UserId, req.Description, req.NotifyBefore,
+	)
 	if err != nil {
 		if errors.Is(err, storage.ErrDateBusy) {
 			s.writeError(w, http.StatusConflict, "date is busy")
@@ -66,6 +69,7 @@ func (s *APIServer) CreateEvent(w http.ResponseWriter, r *http.Request) {
 func (s *APIServer) GetEvent(w http.ResponseWriter, r *http.Request, id int64) {
 	ctx := r.Context()
 
+	//nolint:gosec // ID is always positive from path parameter validation
 	event, err := s.app.GetEvent(ctx, uint64(id))
 	if err != nil {
 		if errors.Is(err, storage.ErrEventNotFound) {
@@ -89,7 +93,11 @@ func (s *APIServer) UpdateEvent(w http.ResponseWriter, r *http.Request, id int64
 		return
 	}
 
-	updated, err := s.app.UpdateEvent(ctx, uint64(id), req.Title, req.StartTime, req.EndTime, req.UserId, req.Description, req.NotifyBefore)
+	//nolint:gosec // ID is always positive from path parameter validation
+	updated, err := s.app.UpdateEvent(
+		ctx, uint64(id), req.Title, req.StartTime, req.EndTime,
+		req.UserId, req.Description, req.NotifyBefore,
+	)
 	if err != nil {
 		if errors.Is(err, storage.ErrEventNotFound) {
 			s.writeError(w, http.StatusNotFound, "event not found")
@@ -110,6 +118,7 @@ func (s *APIServer) UpdateEvent(w http.ResponseWriter, r *http.Request, id int64
 func (s *APIServer) DeleteEvent(w http.ResponseWriter, r *http.Request, id int64) {
 	ctx := r.Context()
 
+	//nolint:gosec // ID is always positive from path parameter validation
 	err := s.app.DeleteEvent(ctx, uint64(id))
 	if err != nil {
 		if errors.Is(err, storage.ErrEventNotFound) {
@@ -201,14 +210,14 @@ func (s *APIServer) writeError(w http.ResponseWriter, status int, message string
 }
 
 func eventToAPI(e storage.Event) Event {
+	//nolint:gosec // ID fits in int64 for all practical purposes
 	id := int64(e.ID)
-	userID := int64(e.UserID)
 	return Event{
 		Id:           &id,
 		Title:        &e.Title,
 		StartTime:    &e.StartTime,
 		EndTime:      &e.EndTime,
-		UserId:       &userID,
+		UserId:       &e.UserID,
 		Description:  e.Description,
 		NotifyBefore: e.NotifyBefore,
 	}

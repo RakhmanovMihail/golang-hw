@@ -17,11 +17,11 @@ var (
 
 // Event represents a calendar event.
 type Event struct {
-	ID           uint64     `db:"id"`
-	Title        string     `db:"title"`
-	StartTime    time.Time  `db:"start_time"`
-	EndTime      time.Time  `db:"end_time"`
-	UserID       int64      `db:"user_id"`
 	Description  *string    `db:"description"`
+	EndTime      time.Time  `db:"end_time"`
+	ID           uint64     `db:"id"`
 	NotifyBefore *int32     `db:"notify_before"`
+	StartTime    time.Time  `db:"start_time"`
+	Title        string     `db:"title"`
+	UserID       int64      `db:"user_id"`
 }

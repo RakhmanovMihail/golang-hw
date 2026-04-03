@@ -221,7 +221,10 @@ func TestApp_CreateEvent(t *testing.T) {
 			appInst := app.New(*loggerInst, storage)
 
 			ctx := tt.ctxSetup()
-			event, err := appInst.CreateEvent(ctx, tt.title, tt.startTime, tt.endTime, tt.userID, tt.description, tt.notifyBefore)
+			event, err := appInst.CreateEvent(
+				ctx, tt.title, tt.startTime, tt.endTime,
+				tt.userID, tt.description, tt.notifyBefore,
+			)
 
 			if tt.wantErrContains != "" {
 				require.Error(t, err)
@@ -414,7 +417,11 @@ func TestApp_UpdateEvent(t *testing.T) {
 			name: "успешное обновление события",
 			setupStorage: func(ts *testStorage) {
 				ts.events = map[uint64]*storage.Event{
-					1: {ID: 1, Title: "Старое название", StartTime: time.Date(2026, 3, 27, 10, 0, 0, 0, time.UTC), EndTime: time.Date(2026, 3, 27, 11, 0, 0, 0, time.UTC)},
+					1: {
+						ID: 1, Title: "Старое название",
+						StartTime: time.Date(2026, 3, 27, 10, 0, 0, 0, time.UTC),
+						EndTime:   time.Date(2026, 3, 27, 11, 0, 0, 0, time.UTC),
+					},
 				}
 			},
 			ctxSetup:        context.Background,
@@ -429,7 +436,11 @@ func TestApp_UpdateEvent(t *testing.T) {
 			name: "обновление с валидацией времени",
 			setupStorage: func(ts *testStorage) {
 				ts.events = map[uint64]*storage.Event{
-					1: {ID: 1, Title: "Событие", StartTime: time.Date(2026, 3, 27, 10, 0, 0, 0, time.UTC), EndTime: time.Date(2026, 3, 27, 11, 0, 0, 0, time.UTC)},
+					1: {
+						ID: 1, Title: "Событие",
+						StartTime: time.Date(2026, 3, 27, 10, 0, 0, 0, time.UTC),
+						EndTime:   time.Date(2026, 3, 27, 11, 0, 0, 0, time.UTC),
+					},
 				}
 			},
 			ctxSetup:        context.Background,
@@ -444,7 +455,11 @@ func TestApp_UpdateEvent(t *testing.T) {
 			name: "обновление с пустым заголовком",
 			setupStorage: func(ts *testStorage) {
 				ts.events = map[uint64]*storage.Event{
-					1: {ID: 1, Title: "Событие", StartTime: time.Date(2026, 3, 27, 10, 0, 0, 0, time.UTC), EndTime: time.Date(2026, 3, 27, 11, 0, 0, 0, time.UTC)},
+					1: {
+						ID: 1, Title: "Событие",
+						StartTime: time.Date(2026, 3, 27, 10, 0, 0, 0, time.UTC),
+						EndTime:   time.Date(2026, 3, 27, 11, 0, 0, 0, time.UTC),
+					},
 				}
 			},
 			ctxSetup:        context.Background,
@@ -498,7 +513,10 @@ func TestApp_UpdateEvent(t *testing.T) {
 			appInst := app.New(*loggerInst, storage)
 
 			ctx := tt.ctxSetup()
-			event, err := appInst.UpdateEvent(ctx, tt.id, tt.title, tt.startTime, tt.endTime, tt.userID, tt.description, tt.notifyBefore)
+			event, err := appInst.UpdateEvent(
+				ctx, tt.id, tt.title, tt.startTime, tt.endTime,
+				tt.userID, tt.description, tt.notifyBefore,
+			)
 
 			if tt.wantErrContains != "" {
 				require.Error(t, err)
@@ -589,7 +607,7 @@ func TestApp_DeleteEvent(t *testing.T) {
 	}
 }
 
-// Helper functions
+// Helper functions.
 func ptrToString(s string) *string {
 	return &s
 }

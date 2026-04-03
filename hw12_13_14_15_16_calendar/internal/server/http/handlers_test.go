@@ -1,3 +1,4 @@
+//nolint:noctx,gosec // Test code uses httptest.NewRequest and safe int conversions
 package internalhttp_test
 
 import (
@@ -510,28 +511,13 @@ func TestGetEvents_WithEvents(t *testing.T) {
 
 // ==================== Helper functions ====================
 
-// createTestEvent создает тестовое событие и возвращает его ID
-func createTestEvent(t *testing.T, app *app.App, title string, startTime, endTime time.Time, userID int64) uint64 {
-	t.Helper()
-
-	ctx := context.Background()
-	event, err := app.Storage.Create(ctx, &storage.Event{
-		Title:     title,
-		StartTime: startTime,
-		EndTime:   endTime,
-		UserID:    userID,
-	})
-	require.NoError(t, err)
-	return event.ID
-}
-
 func ptr[T any](v T) *T {
 	return &v
 }
 
 // ==================== Edge Cases: 500 Internal Server Error ====================
 
-// errorStorage — мок хранилища, возвращающего непредвиденную ошибку
+// errorStorage is a mock storage that returns unexpected errors.
 type errorStorage struct {
 	memory.Store
 }
@@ -548,22 +534,22 @@ func (e *errorStorage) Delete(ctx context.Context, id uint64) error {
 	return assert.AnError
 }
 
-func setupTestRouterWithErrorStorage(t *testing.T) (*chi.Mux, *app.App) {
+func setupTestRouterWithErrorStorage(t *testing.T) *chi.Mux {
 	t.Helper()
 
 	logg := logger.New(logger.LevelDebug)
 	store := &errorStorage{}
-	app := app.New(*logg, store)
-	apiServer := internalhttp.NewAPIServer(app)
+	appInst := app.New(*logg, store)
+	apiServer := internalhttp.NewAPIServer(appInst)
 
 	router := chi.NewRouter()
 	internalhttp.RegisterAPIRoutes(router, apiServer)
 
-	return router, app
+	return router
 }
 
 func TestGetEvents_InternalServerError(t *testing.T) {
-	router, _ := setupTestRouterWithErrorStorage(t)
+	router := setupTestRouterWithErrorStorage(t)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/events", nil)
 	w := httptest.NewRecorder()
@@ -579,7 +565,7 @@ func TestGetEvents_InternalServerError(t *testing.T) {
 }
 
 func TestGetEvent_InternalServerError(t *testing.T) {
-	router, _ := setupTestRouterWithErrorStorage(t)
+	router := setupTestRouterWithErrorStorage(t)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/events/1", nil)
 	w := httptest.NewRecorder()
@@ -590,7 +576,7 @@ func TestGetEvent_InternalServerError(t *testing.T) {
 }
 
 func TestDeleteEvent_InternalServerError(t *testing.T) {
-	router, _ := setupTestRouterWithErrorStorage(t)
+	router := setupTestRouterWithErrorStorage(t)
 
 	req := httptest.NewRequest(http.MethodDelete, "/api/v1/events/1", nil)
 	w := httptest.NewRecorder()
