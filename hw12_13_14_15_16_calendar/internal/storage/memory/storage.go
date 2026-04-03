@@ -4,6 +4,7 @@ import (
 	"context"
 	"sort"
 	"sync"
+	"time"
 
 	"github.com/RakhmanovMihail/golang-hw/hw12_13_14_15_16_calendar/internal/storage"
 )
@@ -110,4 +111,42 @@ func (s *Store) checkOverlap(e storage.Event) error {
 
 func (s *Store) eventsOverlap(a, b storage.Event) bool {
 	return a.StartTime.Before(b.EndTime) && b.StartTime.Before(a.EndTime)
+}
+
+// GetEventsForNotify returns events that need notification sent.
+func (s *Store) GetEventsForNotify(_ context.Context, notifyTime time.Time) ([]storage.Event, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	var result []storage.Event
+	for _, e := range s.events {
+		if e.NotifyBefore != nil {
+			notifyAt := e.StartTime.Add(-time.Duration(*e.NotifyBefore) * time.Minute)
+			if !notifyAt.After(notifyTime) {
+				result = append(result, e)
+			}
+		}
+	}
+	return result, nil
+}
+
+// DeleteOldEvents deletes events older than the cutoff time.
+func (s *Store) DeleteOldEvents(_ context.Context, cutoffTime time.Time) (int64, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	var count int64
+	for id, e := range s.events {
+		if e.StartTime.Before(cutoffTime) {
+			delete(s.events, id)
+			count++
+		}
+	}
+	return count, nil
+}
+
+// SaveNotification saves a notification (no-op for in-memory storage).
+func (s *Store) SaveNotification(_ context.Context, _ *storage.Notification) error {
+	// In-memory storage doesn't persist notifications
+	return nil
 }

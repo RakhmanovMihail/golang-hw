@@ -70,6 +70,7 @@ linters.settings:
           - github.com/oapi-codegen/runtime
           - github.com/oapi-codegen/runtime/types
           - github.com/getkin/kin-openapi
+          - github.com/IBM/sarama
         deny:
           - pkg: io/ioutil
             desc: "Use os or io packages instead"

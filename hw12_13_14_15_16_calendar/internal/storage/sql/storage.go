@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/RakhmanovMihail/golang-hw/hw12_13_14_15_16_calendar/internal/storage"
 	"github.com/jmoiron/sqlx"
@@ -120,4 +121,44 @@ func (s *Store) GetByID(ctx context.Context, id uint64) (*storage.Event, error) 
 	}
 
 	return event, nil
+}
+
+// GetEventsForNotify returns events that need notification sent.
+func (s *Store) GetEventsForNotify(ctx context.Context, notifyTime time.Time) ([]storage.Event, error) {
+	query := `SELECT id, title, start_time, end_time, user_id, description, notify_before
+	          FROM events
+	          WHERE notify_before IS NOT NULL
+	            AND start_time - (notify_before || ' minutes')::interval <= $1`
+
+	var events []storage.Event
+	err := s.db.SelectContext(ctx, &events, query, notifyTime)
+	if err != nil {
+		return nil, err
+	}
+	return events, nil
+}
+
+// DeleteOldEvents deletes events older than the cutoff time.
+func (s *Store) DeleteOldEvents(ctx context.Context, cutoffTime time.Time) (int64, error) {
+	query := `DELETE FROM events WHERE start_time < $1`
+
+	res, err := s.db.ExecContext(ctx, query, cutoffTime)
+	if err != nil {
+		return 0, err
+	}
+
+	return res.RowsAffected()
+}
+
+// SaveNotification saves a notification to the database.
+func (s *Store) SaveNotification(ctx context.Context, n *storage.Notification) error {
+	query := `INSERT INTO notifications (event_id, title, event_date, user_id)
+	          VALUES ($1, $2, $3, $4)
+	          RETURNING id`
+
+	err := s.db.QueryRowContext(ctx, query,
+		n.EventID, n.Title, n.EventDate, n.UserID).
+		Scan(&n.ID)
+
+	return err
 }

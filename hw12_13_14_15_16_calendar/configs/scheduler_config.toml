@@ -1,0 +1,13 @@
+[logger]
+level = "info"
+
+[storage]
+dsn = "postgres://postgres:123456@localhost:5432/calendar?sslmode=disable"
+
+[kafka]
+brokers = ["localhost:9092"]
+topic = "calendar_notifications"
+
+[schedule]
+check_interval = "1m"
+cleanup_older = "8760h"
