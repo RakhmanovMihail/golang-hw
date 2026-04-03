@@ -47,6 +47,7 @@ install-lint-deps:
 	(which golangci-lint > /dev/null) || curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(shell go env GOPATH)/bin v2.11.4
 
 lint: install-lint-deps
+	go mod tidy
 	golangci-lint run ./...
 
 generate:
