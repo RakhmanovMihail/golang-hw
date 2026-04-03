@@ -1,25 +1,13 @@
+version: "2"
+
 run:
   tests: true
   build-tags:
     - bench
-    - !bench
-
-linters-settings:
-  funlen:
-    lines: 150
-    statements: 80
-
-issues:
-  exclude-rules:
-    - path: _test\.go
-      linters:
-        - errcheck
-        - dupl
-        - gocyclo
-        - gosec
+    - "!bench"
 
 linters:
-  disable-all: true
+  default: none
   enable:
     - asciicheck
     - bodyclose
@@ -29,20 +17,15 @@ linters:
     - durationcheck
     - errorlint
     - exhaustive
-    - exportloopref
     - funlen
-    - gci
     - gocognit
     - goconst
     - gocritic
     - gocyclo
     - godot
-    - gofmt
-    - gofumpt
     - goheader
     - goprintffuncname
     - gosec
-    - gosimple
     - govet
     - importas
     - ineffassign
@@ -57,11 +40,75 @@ linters:
     - predeclared
     - revive
     - staticcheck
-    - stylecheck
     - tagliatelle
     - thelper
-    - typecheck
     - unconvert
     - unparam
     - unused
     - whitespace
+
+linters.settings:
+  funlen:
+    lines: 150
+    statements: 80
+  depguard:
+    rules:
+      main:
+        allow:
+          - $gostd
+          - github.com/RakhmanovMihail/golang-hw/hw12_13_14_15_16_calendar
+          - github.com/BurntSushi/toml
+          - github.com/lib/pq
+          - github.com/pressly/goose/v3
+          - github.com/jmoiron/sqlx
+          - github.com/DATA-DOG/go-sqlmock
+          - github.com/stretchr/testify
+          - github.com/gorilla/mux
+          - github.com/google/uuid
+        deny:
+          - pkg: io/ioutil
+            desc: "Use os or io packages instead"
+  gci:
+    sections:
+      - standard
+      - default
+      - prefix(github.com/RakhmanovMihail/golang-hw/hw12_13_14_15_16_calendar)
+    custom-order: true
+  revive:
+    rules:
+      - name: exported
+        disabled: true
+
+issues:
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - errcheck
+        - dupl
+        - gocyclo
+        - gosec
+        - revive
+        - gocritic
+        - unparam
+        - unused
+        - staticcheck
+        - thelper
+        - noctx
+        - prealloc
+    - path: cmd/calendar/version\.go
+      linters:
+        - unused
+
+formatters:
+  enable:
+    - gci
+    - gofmt
+    - gofumpt
+  settings:
+    gci:
+      sections:
+        - standard
+        - default
+      custom-order: true
+    gofumpt:
+      extra-rules: true
