@@ -150,3 +150,8 @@ func (s *Store) SaveNotification(_ context.Context, _ *storage.Notification) err
 	// In-memory storage doesn't persist notifications
 	return nil
 }
+
+// Close closes the in-memory storage (no-op).
+func (s *Store) Close(_ context.Context) error {
+	return nil
+}

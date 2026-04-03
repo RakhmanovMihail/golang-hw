@@ -20,4 +20,6 @@ type Storage interface {
 	DeleteOldEvents(ctx context.Context, cutoffTime time.Time) (int64, error)
 	// SaveNotification saves a notification to the database.
 	SaveNotification(ctx context.Context, n *Notification) error
+	// Close closes the storage connection.
+	Close(ctx context.Context) error
 }
