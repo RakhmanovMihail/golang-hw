@@ -137,6 +137,22 @@ func (s *testStorage) GetByID(ctx context.Context, id uint64) (*storage.Event, e
 	return nil, storage.ErrEventNotFound
 }
 
+func (s *testStorage) Close(_ context.Context) error {
+	return nil
+}
+
+func (s *testStorage) GetEventsForNotify(_ context.Context, _ time.Time) ([]storage.Event, error) {
+	return nil, nil
+}
+
+func (s *testStorage) DeleteOldEvents(_ context.Context, _ time.Time) (int64, error) {
+	return 0, nil
+}
+
+func (s *testStorage) SaveNotification(_ context.Context, _ *storage.Notification) error {
+	return nil
+}
+
 func TestApp_New(t *testing.T) {
 	loggerInst := loggerpkg.New(loggerpkg.LevelInfo)
 	storage := &testStorage{}
