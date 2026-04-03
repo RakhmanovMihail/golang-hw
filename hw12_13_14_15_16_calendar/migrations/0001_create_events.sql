@@ -1,14 +1,15 @@
 CREATE TABLE IF NOT EXISTS events
 (
-    id         BIGSERIAL PRIMARY KEY,
-    title      TEXT                     NOT NULL,
-    start_time TIMESTAMP WITH TIME ZONE NOT NULL,
-    end_time   TIMESTAMP WITH TIME ZONE NOT NULL CHECK (end_time > start_time),
-    user_id    BIGINT                   NOT NULL,
+    id            BIGSERIAL PRIMARY KEY,
+    title         TEXT                     NOT NULL,
+    start_time    TIMESTAMP WITH TIME ZONE NOT NULL,
+    end_time      TIMESTAMP WITH TIME ZONE NOT NULL CHECK (end_time > start_time),
+    user_id       BIGINT                   NOT NULL,
+    description   TEXT,
+    notify_before INTEGER,
 
-
-    INDEX      idx_events_user_start(user_id, start_time),
-    INDEX      idx_events_start_time(start_time)
+    INDEX       idx_events_user_start(user_id, start_time),
+    INDEX       idx_events_start_time(start_time)
 );
 
 CREATE OR REPLACE FUNCTION check_event_overlap()
