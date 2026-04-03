@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	app "github.com/RakhmanovMihail/golang-hw/hw12_13_14_15_16_calendar/internal/app"
 	"github.com/RakhmanovMihail/golang-hw/hw12_13_14_15_16_calendar/internal/logger"
@@ -41,6 +42,22 @@ func (m *mockStorage) Update(ctx context.Context, id uint64, event *storage.Even
 }
 
 func (m *mockStorage) Delete(ctx context.Context, id uint64) error {
+	return nil
+}
+
+func (m *mockStorage) GetEventsForNotify(_ context.Context, _ time.Time) ([]storage.Event, error) {
+	return nil, nil
+}
+
+func (m *mockStorage) DeleteOldEvents(_ context.Context, _ time.Time) (int64, error) {
+	return 0, nil
+}
+
+func (m *mockStorage) SaveNotification(_ context.Context, _ *storage.Notification) error {
+	return nil
+}
+
+func (m *mockStorage) Close(_ context.Context) error {
 	return nil
 }
 
