@@ -407,7 +407,11 @@ func TestUpdateEvent_InvalidJSON(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	req := httptest.NewRequest(http.MethodPut, "/api/v1/events/"+strconv.Itoa(int(created.ID)), bytes.NewReader([]byte("invalid json")))
+	req := httptest.NewRequest(
+		http.MethodPut,
+		"/api/v1/events/"+strconv.Itoa(int(created.ID)),
+		bytes.NewReader([]byte("invalid json")),
+	)
 	w := httptest.NewRecorder()
 
 	router.ServeHTTP(w, req)
