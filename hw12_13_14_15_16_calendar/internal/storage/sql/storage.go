@@ -38,15 +38,15 @@ func (s *Store) Close(_ context.Context) error {
 // Create creates a new event in the database.
 func (s *Store) Create(ctx context.Context, e *storage.Event) (*storage.Event, error) {
 	query := `
-       INSERT INTO events (title, start_time, end_time, user_id)
-       VALUES ($1, $2, $3, $4)
-       RETURNING id, title, start_time, end_time, user_id`
+       INSERT INTO events (title, start_time, end_time, user_id, description, notify_before)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING id, title, start_time, end_time, user_id, description, notify_before`
 
 	created := &storage.Event{}
 	err := s.db.QueryRowContext(ctx, query,
-		e.Title, e.StartTime, e.EndTime, e.UserID).
+		e.Title, e.StartTime, e.EndTime, e.UserID, e.Description, e.NotifyBefore).
 		Scan(&created.ID, &created.Title, &created.StartTime,
-			&created.EndTime, &created.UserID)
+			&created.EndTime, &created.UserID, &created.Description, &created.NotifyBefore)
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +56,7 @@ func (s *Store) Create(ctx context.Context, e *storage.Event) (*storage.Event, e
 
 // Read returns all events from the database.
 func (s *Store) Read(ctx context.Context) ([]storage.Event, error) {
-	query := `SELECT id, title, start_time, end_time, user_id FROM events ORDER BY start_time`
+	query := `SELECT id, title, start_time, end_time, user_id, description, notify_before FROM events ORDER BY start_time`
 
 	var events []storage.Event
 	err := s.db.SelectContext(ctx, &events, query)
@@ -71,15 +71,15 @@ func (s *Store) Read(ctx context.Context) ([]storage.Event, error) {
 func (s *Store) Update(ctx context.Context, id uint64, e *storage.Event) (*storage.Event, error) {
 	query := `
         UPDATE events
-        SET title = $1, start_time = $2, end_time = $3, user_id = $4
-        WHERE id = $5
-        RETURNING id, title, start_time, end_time, user_id`
+        SET title = $1, start_time = $2, end_time = $3, user_id = $4, description = $5, notify_before = $6
+        WHERE id = $7
+        RETURNING id, title, start_time, end_time, user_id, description, notify_before`
 
 	updated := &storage.Event{}
 	err := s.db.QueryRowContext(ctx, query,
-		e.Title, e.StartTime, e.EndTime, e.UserID, id).
+		e.Title, e.StartTime, e.EndTime, e.UserID, e.Description, e.NotifyBefore, id).
 		Scan(&updated.ID, &updated.Title, &updated.StartTime,
-			&updated.EndTime, &updated.UserID)
+			&updated.EndTime, &updated.UserID, &updated.Description, &updated.NotifyBefore)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, storage.ErrEventNotFound
@@ -108,7 +108,7 @@ func (s *Store) Delete(ctx context.Context, id uint64) error {
 
 // GetByID returns an event by ID from the database.
 func (s *Store) GetByID(ctx context.Context, id uint64) (*storage.Event, error) {
-	query := `SELECT id, title, start_time, end_time, user_id FROM events WHERE id = $1`
+	query := `SELECT id, title, start_time, end_time, user_id, description, notify_before FROM events WHERE id = $1`
 
 	event := &storage.Event{}
 	err := s.db.GetContext(ctx, event, query, id)

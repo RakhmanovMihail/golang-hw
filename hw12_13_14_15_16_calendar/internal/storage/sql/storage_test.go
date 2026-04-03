@@ -35,11 +35,11 @@ func TestStore_Create(t *testing.T) {
 		UserID:    1,
 	}
 
-	rows := sqlmock.NewRows([]string{"id", "title", "start_time", "end_time", "user_id"}).
-		AddRow(uint64(1), event.Title, event.StartTime, event.EndTime, event.UserID)
+	rows := sqlmock.NewRows([]string{"id", "title", "start_time", "end_time", "user_id", "description", "notify_before"}).
+		AddRow(uint64(1), event.Title, event.StartTime, event.EndTime, event.UserID, nil, nil)
 
 	mock.ExpectQuery("INSERT INTO events").
-		WithArgs(event.Title, event.StartTime, event.EndTime, event.UserID).
+		WithArgs(event.Title, event.StartTime, event.EndTime, event.UserID, event.Description, event.NotifyBefore).
 		WillReturnRows(rows)
 
 	created, err := store.Create(ctx, event)
@@ -59,10 +59,10 @@ func TestStore_Read(t *testing.T) {
 
 	ctx := context.Background()
 
-	rows := sqlmock.NewRows([]string{"id", "title", "start_time", "end_time", "user_id"}).
-		AddRow(uint64(1), "Event 1", time.Now(), time.Now().Add(time.Hour), 1)
+	rows := sqlmock.NewRows([]string{"id", "title", "start_time", "end_time", "user_id", "description", "notify_before"}).
+		AddRow(uint64(1), "Event 1", time.Now(), time.Now().Add(time.Hour), 1, nil, nil)
 
-	mock.ExpectQuery("SELECT id, title, start_time, end_time, user_id FROM events").
+	mock.ExpectQuery("SELECT id, title, start_time, end_time, user_id, description, notify_before FROM events").
 		WillReturnRows(rows)
 
 	events, err := store.Read(ctx)
@@ -89,11 +89,11 @@ func TestStore_Update(t *testing.T) {
 		UserID:    1,
 	}
 
-	rows := sqlmock.NewRows([]string{"id", "title", "start_time", "end_time", "user_id"}).
-		AddRow(id, event.Title, event.StartTime, event.EndTime, event.UserID)
+	rows := sqlmock.NewRows([]string{"id", "title", "start_time", "end_time", "user_id", "description", "notify_before"}).
+		AddRow(id, event.Title, event.StartTime, event.EndTime, event.UserID, nil, nil)
 
 	mock.ExpectQuery("UPDATE events").
-		WithArgs(event.Title, event.StartTime, event.EndTime, event.UserID, id).
+		WithArgs(event.Title, event.StartTime, event.EndTime, event.UserID, event.Description, event.NotifyBefore, id).
 		WillReturnRows(rows)
 
 	updated, err := store.Update(ctx, id, event)
@@ -121,7 +121,7 @@ func TestStore_Update_NotFound(t *testing.T) {
 	}
 
 	mock.ExpectQuery("UPDATE events").
-		WithArgs(event.Title, event.StartTime, event.EndTime, event.UserID, id).
+		WithArgs(event.Title, event.StartTime, event.EndTime, event.UserID, event.Description, event.NotifyBefore, id).
 		WillReturnError(sql.ErrNoRows)
 
 	_, err = store.Update(ctx, id, event)
@@ -185,10 +185,10 @@ func TestStore_GetByID(t *testing.T) {
 	ctx := context.Background()
 	id := uint64(1)
 
-	rows := sqlmock.NewRows([]string{"id", "title", "start_time", "end_time", "user_id"}).
-		AddRow(id, "Test Event", time.Now(), time.Now().Add(time.Hour), 1)
+	rows := sqlmock.NewRows([]string{"id", "title", "start_time", "end_time", "user_id", "description", "notify_before"}).
+		AddRow(id, "Test Event", time.Now(), time.Now().Add(time.Hour), 1, nil, nil)
 
-	mock.ExpectQuery("SELECT id, title, start_time, end_time, user_id FROM events").
+	mock.ExpectQuery("SELECT id, title, start_time, end_time, user_id, description, notify_before FROM events").
 		WithArgs(id).
 		WillReturnRows(rows)
 
@@ -210,7 +210,7 @@ func TestStore_GetByID_NotFound(t *testing.T) {
 	ctx := context.Background()
 	id := uint64(999)
 
-	mock.ExpectQuery("SELECT id, title, start_time, end_time, user_id FROM events").
+	mock.ExpectQuery("SELECT id, title, start_time, end_time, user_id, description, notify_before FROM events").
 		WithArgs(id).
 		WillReturnError(sql.ErrNoRows)
 

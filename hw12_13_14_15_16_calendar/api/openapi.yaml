@@ -127,6 +127,22 @@ components:
       example:
         error: "Событие не найдено"
 
+    DeleteResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Событие удалено"
+      example:
+        message: "Событие удалено"
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: "JWT токен для аутентификации. Добавьте заголовок: Authorization: Bearer <token>"
+
 paths:
   /api/v1/events:
     get:
@@ -288,11 +304,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: "Событие удалено"
+                $ref: '#/components/schemas/DeleteResponse'
         '404':
           description: Событие не найдено
           content:

@@ -49,8 +49,7 @@ func (s *APIServer) CreateEvent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// NOTE: ID = 0 для всех создаваемых событий — это ограничение текущей архитектуры.
-	created, err := s.app.CreateEvent(ctx, 0, req.Title, req.StartTime, req.EndTime, int(req.UserId))
+	created, err := s.app.CreateEvent(ctx, req.Title, req.StartTime, req.EndTime, req.UserId, req.Description, req.NotifyBefore)
 	if err != nil {
 		if errors.Is(err, storage.ErrDateBusy) {
 			s.writeError(w, http.StatusConflict, "date is busy")
@@ -90,13 +89,7 @@ func (s *APIServer) UpdateEvent(w http.ResponseWriter, r *http.Request, id int64
 		return
 	}
 
-	var userID *int
-	if req.UserId != nil {
-		id := int(*req.UserId)
-		userID = &id
-	}
-
-	updated, err := s.app.UpdateEvent(ctx, uint64(id), req.Title, req.StartTime, req.EndTime, userID)
+	updated, err := s.app.UpdateEvent(ctx, uint64(id), req.Title, req.StartTime, req.EndTime, req.UserId, req.Description, req.NotifyBefore)
 	if err != nil {
 		if errors.Is(err, storage.ErrEventNotFound) {
 			s.writeError(w, http.StatusNotFound, "event not found")
@@ -127,7 +120,8 @@ func (s *APIServer) DeleteEvent(w http.ResponseWriter, r *http.Request, id int64
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
+	msg := "Событие удалено"
+	s.writeJSON(w, http.StatusOK, DeleteResponse{Message: &msg})
 }
 
 // GetEventsByDay implements ServerInterface.
@@ -210,10 +204,12 @@ func eventToAPI(e storage.Event) Event {
 	id := int64(e.ID)
 	userID := int64(e.UserID)
 	return Event{
-		Id:        &id,
-		Title:     &e.Title,
-		StartTime: &e.StartTime,
-		EndTime:   &e.EndTime,
-		UserId:    &userID,
+		Id:           &id,
+		Title:        &e.Title,
+		StartTime:    &e.StartTime,
+		EndTime:      &e.EndTime,
+		UserId:       &userID,
+		Description:  e.Description,
+		NotifyBefore: e.NotifyBefore,
 	}
 }

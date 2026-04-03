@@ -23,13 +23,14 @@ func New(logger logger.Logger, storage storage.Storage) *App {
 }
 
 // CreateEvent creates a new event.
-func (a *App) CreateEvent(ctx context.Context, id uint64, title string, startTime, endTime time.Time, userID int) (*storage.Event, error) {
+func (a *App) CreateEvent(ctx context.Context, title string, startTime, endTime time.Time, userID int64, description *string, notifyBefore *int32) (*storage.Event, error) {
 	event, err := a.Storage.Create(ctx, &storage.Event{
-		ID:        id,
-		Title:     title,
-		StartTime: startTime,
-		EndTime:   endTime,
-		UserID:    userID,
+		Title:        title,
+		StartTime:    startTime,
+		EndTime:      endTime,
+		UserID:       userID,
+		Description:  description,
+		NotifyBefore: notifyBefore,
 	})
 	return event, err
 }
@@ -45,7 +46,7 @@ func (a *App) GetEvent(ctx context.Context, id uint64) (*storage.Event, error) {
 }
 
 // UpdateEvent updates an existing event.
-func (a *App) UpdateEvent(ctx context.Context, id uint64, title *string, startTime, endTime *time.Time, userID *int) (*storage.Event, error) {
+func (a *App) UpdateEvent(ctx context.Context, id uint64, title *string, startTime, endTime *time.Time, userID *int64, description *string, notifyBefore *int32) (*storage.Event, error) {
 	existing, err := a.Storage.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
@@ -67,6 +68,12 @@ func (a *App) UpdateEvent(ctx context.Context, id uint64, title *string, startTi
 	}
 	if userID != nil {
 		newEvent.UserID = *userID
+	}
+	if description != nil {
+		newEvent.Description = description
+	}
+	if notifyBefore != nil {
+		newEvent.NotifyBefore = notifyBefore
 	}
 
 	// Validate: EndTime must be after StartTime
