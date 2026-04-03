@@ -67,7 +67,7 @@ func TestScheduler_SendNotifications(t *testing.T) {
 	// Verify notifications were sent
 	require.NotEmpty(t, producer.messages, "Expected notifications to be sent")
 
-	var msg scheduler.NotificationMessage
+	var msg kafka.NotificationMessage
 	err = json.Unmarshal(producer.messages[0].Value, &msg)
 	require.NoError(t, err)
 

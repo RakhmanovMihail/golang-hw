@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/BurntSushi/toml"
@@ -101,7 +102,7 @@ func loadConfig(path string) (*Config, error) {
 
 	// Override with environment variables if set
 	if brokers := os.Getenv("KAFKA_BROKERS"); brokers != "" {
-		cfg.Kafka.Brokers = []string{brokers}
+		cfg.Kafka.Brokers = strings.Split(brokers, ",")
 	}
 	if topic := os.Getenv("KAFKA_TOPIC"); topic != "" {
 		cfg.Kafka.Topic = topic

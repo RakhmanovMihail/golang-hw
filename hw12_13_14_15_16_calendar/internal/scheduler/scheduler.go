@@ -23,14 +23,6 @@ type Scheduler struct {
 	cleanupOlder  time.Duration
 }
 
-// NotificationMessage represents a notification sent to Kafka.
-type NotificationMessage struct {
-	EventID   uint64    `json:"event_id"`
-	Title     string    `json:"title"`
-	EventDate time.Time `json:"event_date"`
-	UserID    int64     `json:"user_id"`
-}
-
 // New creates a new Scheduler.
 func New(
 	store storage.Storage,
@@ -99,7 +91,7 @@ func (s *Scheduler) sendNotifications(ctx context.Context, now time.Time) error 
 
 	sent := 0
 	for _, e := range events {
-		msg := NotificationMessage{
+		msg := kafka.NotificationMessage{
 			EventID:   e.ID,
 			Title:     e.Title,
 			EventDate: e.StartTime,

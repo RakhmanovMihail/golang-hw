@@ -9,7 +9,6 @@ import (
 
 	"github.com/RakhmanovMihail/golang-hw/hw12_13_14_15_16_calendar/internal/kafka"
 	"github.com/RakhmanovMihail/golang-hw/hw12_13_14_15_16_calendar/internal/logger"
-	"github.com/RakhmanovMihail/golang-hw/hw12_13_14_15_16_calendar/internal/scheduler"
 	"github.com/RakhmanovMihail/golang-hw/hw12_13_14_15_16_calendar/internal/storage"
 )
 
@@ -46,7 +45,7 @@ func (s *Storer) Run(ctx context.Context) error {
 }
 
 func (s *Storer) handleMessage(_ context.Context, msg kafka.Message) error {
-	var notification scheduler.NotificationMessage
+	var notification kafka.NotificationMessage
 	if err := json.Unmarshal(msg.Value, &notification); err != nil {
 		return fmt.Errorf("unmarshal notification: %w", err)
 	}

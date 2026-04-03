@@ -8,7 +8,6 @@ import (
 
 	"github.com/RakhmanovMihail/golang-hw/hw12_13_14_15_16_calendar/internal/kafka"
 	"github.com/RakhmanovMihail/golang-hw/hw12_13_14_15_16_calendar/internal/logger"
-	"github.com/RakhmanovMihail/golang-hw/hw12_13_14_15_16_calendar/internal/scheduler"
 	"github.com/RakhmanovMihail/golang-hw/hw12_13_14_15_16_calendar/internal/storage/memory"
 	"github.com/RakhmanovMihail/golang-hw/hw12_13_14_15_16_calendar/internal/storer"
 	"github.com/stretchr/testify/assert"
@@ -20,7 +19,7 @@ func TestStorer_HandleMessage(t *testing.T) {
 	logg := logger.New(logger.LevelInfo)
 
 	// Create a mock consumer that provides a single message
-	notification := scheduler.NotificationMessage{
+	notification := kafka.NotificationMessage{
 		EventID:   42,
 		Title:     "Meeting with client",
 		EventDate: time.Date(2026, 3, 27, 10, 0, 0, 0, time.UTC),
@@ -64,7 +63,7 @@ func TestStorer_HandleMessage_WithMockConsumer(t *testing.T) {
 	store := memory.New()
 	logg := logger.New(logger.LevelInfo)
 
-	notification := scheduler.NotificationMessage{
+	notification := kafka.NotificationMessage{
 		EventID:   42,
 		Title:     "Meeting with client",
 		EventDate: time.Date(2026, 3, 27, 10, 0, 0, 0, time.UTC),
