@@ -59,17 +59,37 @@ func main() {
 		lgr.Error("Failed to create Kafka consumer: " + err.Error())
 		os.Exit(1)
 	}
-	defer consumer.Close()
 
 	st := storer.New(consumer, store, *lgr)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	if err := st.Run(ctx); err != nil {
-		lgr.Error("Storer error: " + err.Error())
-		os.Exit(1)
+	// Run storer in goroutine
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- st.Run(ctx)
+	}()
+
+	// Wait for context cancellation or error
+	select {
+	case <-ctx.Done():
+		lgr.Info("shutting down storer...")
+	case err := <-errCh:
+		if err != nil {
+			lgr.Error("Storer error: " + err.Error())
+		}
 	}
+
+	// Graceful shutdown
+	if err := consumer.Close(); err != nil {
+		lgr.Error("Failed to close Kafka consumer: " + err.Error())
+	}
+	if err := store.Close(context.Background()); err != nil {
+		lgr.Error("Failed to close storage: " + err.Error())
+	}
+
+	lgr.Info("storer stopped")
 }
 
 func loadConfig(path string) (*Config, error) {
@@ -78,5 +98,23 @@ func loadConfig(path string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// Override with environment variables if set
+	if brokers := os.Getenv("KAFKA_BROKERS"); brokers != "" {
+		cfg.Kafka.Brokers = []string{brokers}
+	}
+	if topic := os.Getenv("KAFKA_TOPIC"); topic != "" {
+		cfg.Kafka.Topic = topic
+	}
+	if groupID := os.Getenv("KAFKA_GROUP_ID"); groupID != "" {
+		cfg.Kafka.GroupID = groupID
+	}
+	if dsn := os.Getenv("DB_DSN"); dsn != "" {
+		cfg.Storage.DSN = dsn
+	}
+	if level := os.Getenv("LOG_LEVEL"); level != "" {
+		cfg.Logger.Level = level
+	}
+
 	return &cfg, nil
 }

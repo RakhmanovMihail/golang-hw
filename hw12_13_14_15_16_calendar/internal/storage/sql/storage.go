@@ -128,7 +128,7 @@ func (s *Store) GetEventsForNotify(ctx context.Context, notifyTime time.Time) ([
 	query := `SELECT id, title, start_time, end_time, user_id, description, notify_before
 	          FROM events
 	          WHERE notify_before IS NOT NULL
-	            AND start_time - (notify_before || ' minutes')::interval <= $1`
+	            AND start_time <= $1 + (notify_before * interval '1 minute')`
 
 	var events []storage.Event
 	err := s.db.SelectContext(ctx, &events, query, notifyTime)

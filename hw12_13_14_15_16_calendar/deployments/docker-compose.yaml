@@ -67,36 +67,33 @@ services:
       context: ..
       dockerfile: build/Dockerfile
     environment:
-      - DB_HOST=postgres
-      - DB_PORT=5432
-      - DB_NAME=calendar
-      - DB_USER=postgres
-      - DB_PASSWORD=123456
+      - DB_DSN=postgres://postgres:123456@postgres:5432/calendar?sslmode=disable
       - KAFKA_BROKERS=kafka:29092
+      - KAFKA_TOPIC=calendar_notifications
+      - LOG_LEVEL=info
     depends_on:
       postgres:
         condition: service_healthy
       kafka:
         condition: service_healthy
-    command: ["./calendar_scheduler", "--config=configs/scheduler_config.toml"]
+    command: ["./calendar_scheduler", "--config=/etc/calendar/scheduler_config.toml"]
 
   calendar_storer:
     build:
       context: ..
       dockerfile: build/Dockerfile
     environment:
-      - DB_HOST=postgres
-      - DB_PORT=5432
-      - DB_NAME=calendar
-      - DB_USER=postgres
-      - DB_PASSWORD=123456
+      - DB_DSN=postgres://postgres:123456@postgres:5432/calendar?sslmode=disable
       - KAFKA_BROKERS=kafka:29092
+      - KAFKA_TOPIC=calendar_notifications
+      - KAFKA_GROUP_ID=calendar-storer-group
+      - LOG_LEVEL=info
     depends_on:
       postgres:
         condition: service_healthy
       kafka:
         condition: service_healthy
-    command: ["./calendar_storer", "--config=configs/storer_config.toml"]
+    command: ["./calendar_storer", "--config=/etc/calendar/storer_config.toml"]
 
 volumes:
   pgdata:

@@ -65,7 +65,6 @@ func main() {
 		lgr.Error("Failed to create Kafka producer: " + err.Error())
 		os.Exit(1)
 	}
-	defer producer.Close()
 
 	checkInterval, err := time.ParseDuration(cfg.Schedule.CheckInterval)
 	if err != nil {
@@ -84,10 +83,31 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	if err := sched.Run(ctx); err != nil {
-		lgr.Error("Scheduler error: " + err.Error())
-		os.Exit(1)
+	// Run scheduler in goroutine
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- sched.Run(ctx)
+	}()
+
+	// Wait for context cancellation or error
+	select {
+	case <-ctx.Done():
+		lgr.Info("shutting down scheduler...")
+	case err := <-errCh:
+		if err != nil {
+			lgr.Error("Scheduler error: " + err.Error())
+		}
 	}
+
+	// Graceful shutdown
+	if err := producer.Close(); err != nil {
+		lgr.Error("Failed to close Kafka producer: " + err.Error())
+	}
+	if err := store.Close(context.Background()); err != nil {
+		lgr.Error("Failed to close storage: " + err.Error())
+	}
+
+	lgr.Info("scheduler stopped")
 }
 
 func loadConfig(path string) (*Config, error) {
@@ -96,5 +116,20 @@ func loadConfig(path string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// Override with environment variables if set
+	if brokers := os.Getenv("KAFKA_BROKERS"); brokers != "" {
+		cfg.Kafka.Brokers = []string{brokers}
+	}
+	if topic := os.Getenv("KAFKA_TOPIC"); topic != "" {
+		cfg.Kafka.Topic = topic
+	}
+	if dsn := os.Getenv("DB_DSN"); dsn != "" {
+		cfg.Storage.DSN = dsn
+	}
+	if level := os.Getenv("LOG_LEVEL"); level != "" {
+		cfg.Logger.Level = level
+	}
+
 	return &cfg, nil
 }
