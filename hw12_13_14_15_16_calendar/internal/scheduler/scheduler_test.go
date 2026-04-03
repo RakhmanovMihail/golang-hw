@@ -51,17 +51,9 @@ func TestScheduler_SendNotifications(t *testing.T) {
 
 	sched := scheduler.New(store, producer, *logg, "test-topic", 1*time.Second, 8760*time.Hour)
 
-	// Run one tick
-	ctx := context.Background()
-	err = sched.Run(ctx)
-	// Run will block, so we test indirectly via tick logic
-	// For unit testing, we verify the producer received messages after a short run
-	_ = sched // scheduler is designed for long-running use
-
-	// Directly verify by creating a new scheduler and running a single tick
-	// Since Run() blocks, we verify via the mock producer after context cancellation
-	ctx, cancel := context.WithCancel(ctx)
-	cancel() // Cancel immediately after first tick
+	// Run scheduler with immediate cancellation to trigger one tick
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
 	_ = sched.Run(ctx)
 
 	// Verify notifications were sent

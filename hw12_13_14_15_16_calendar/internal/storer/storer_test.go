@@ -3,6 +3,7 @@ package storer_test
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"testing"
 	"time"
 
@@ -88,8 +89,7 @@ func TestStorer_HandleMessage_WithMockConsumer(t *testing.T) {
 	}()
 
 	err = st.Run(ctx)
-	// Context cancellation causes Run to return
-	require.True(t, err == nil || err == context.Canceled)
+	require.True(t, err == nil || errors.Is(err, context.Canceled))
 
 	// Verify notification was saved
 	// Note: memory storage doesn't persist notifications, but SQL storage would

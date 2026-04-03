@@ -18,7 +18,7 @@ type SaramaConsumer struct {
 // NewSaramaConsumer creates a new Kafka consumer using Consumer Group API.
 func NewSaramaConsumer(brokers []string, topic, groupID string) (*SaramaConsumer, error) {
 	config := sarama.NewConfig()
-	config.Consumer.Group.Rebalance.Strategy = sarama.BalanceStrategyRange
+	config.Consumer.Group.Rebalance.Strategy = sarama.NewBalanceStrategyRange()
 	config.Consumer.Offsets.Initial = sarama.OffsetNewest
 
 	group, err := sarama.NewConsumerGroup(brokers, groupID, config)
@@ -35,9 +35,9 @@ func NewSaramaConsumer(brokers []string, topic, groupID string) (*SaramaConsumer
 
 // handler adapts kafka.Handler to use our Handler function type.
 type handler struct {
-	fn      Handler
-	ctx     context.Context
-	cancel  context.CancelFunc
+	cancel context.CancelFunc
+	ctx    context.Context
+	fn     Handler
 }
 
 func (h *handler) Setup(_ sarama.ConsumerGroupSession) error  { return nil }

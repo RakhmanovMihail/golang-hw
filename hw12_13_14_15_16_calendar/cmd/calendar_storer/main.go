@@ -53,11 +53,11 @@ func main() {
 		lgr.Error("Failed to create SQL storage: " + err.Error())
 		os.Exit(1)
 	}
-	defer store.Close(context.Background())
 
 	consumer, err := kafka.NewSaramaConsumer(cfg.Kafka.Brokers, cfg.Kafka.Topic, cfg.Kafka.GroupID)
 	if err != nil {
 		lgr.Error("Failed to create Kafka consumer: " + err.Error())
+		store.Close(context.Background())
 		os.Exit(1)
 	}
 
