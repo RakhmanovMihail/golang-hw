@@ -7,12 +7,12 @@ import (
 )
 
 var (
-	release   = "UNKNOWN"
-	buildDate = "UNKNOWN"
-	gitHash   = "UNKNOWN"
+	release   = "UNKNOWN" //nolint:unused // Заполняется при сборке через -ldflags
+	buildDate = "UNKNOWN" //nolint:unused // Заполняется при сборке через -ldflags
+	gitHash   = "UNKNOWN" //nolint:unused // Заполняется при сборке через -ldflags
 )
 
-func printVersion() {
+func printVersion() { //nolint:unused // Вызывается через команду version
 	if err := json.NewEncoder(os.Stdout).Encode(struct {
 		Release   string
 		BuildDate string

@@ -1,0 +1,12 @@
+package storage
+
+import "context"
+
+// Storage is the interface for event storage.
+type Storage interface {
+	Create(ctx context.Context, e *Event) (*Event, error)
+	Read(ctx context.Context) ([]Event, error)
+	Update(ctx context.Context, id uint64, e *Event) (*Event, error)
+	Delete(ctx context.Context, id uint64) error
+	GetByID(ctx context.Context, id uint64) (*Event, error)
+}
